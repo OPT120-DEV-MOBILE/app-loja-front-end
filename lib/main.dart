@@ -19,7 +19,6 @@ class MyApp extends StatelessWidget {
         '/': (context) => const HomeScreen(),
         '/login': (context) => LoginScreen(
           onFormSubmitted: () {
-            // Navegar para a HomeScreen após o login bem-sucedido
             Navigator.pushReplacementNamed(context, '/');
           },
         ),

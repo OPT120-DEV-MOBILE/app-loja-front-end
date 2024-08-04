@@ -3,6 +3,7 @@
 import 'package:flutter/material.dart';
 import 'package:dio/dio.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter_masked_text2/flutter_masked_text2.dart';
 
 class UserScreen extends StatefulWidget {
   const UserScreen({super.key});
@@ -51,26 +52,29 @@ class _UserScreenState extends State<UserScreen> {
       ),
       body: Padding(
         padding: const EdgeInsets.all(20.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: [
-                SizedBox(
-                  width: 120,
-                  child: ElevatedButton(
-                    onPressed: () {
-                      _openCreateUserForm(context);
-                    },
-                    child: const Text('Criar Usuário', style: TextStyle(fontSize: 12)),
+        child: SingleChildScrollView(
+
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  SizedBox(
+                    width: 120,
+                    child: ElevatedButton(
+                      onPressed: () {
+                        _openCreateUserForm(context);
+                      },
+                      child: const Text('Criar Usuário', style: TextStyle(fontSize: 12)),
+                    ),
                   ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 20),
-            _buildList(context),
-          ],
+                ],
+              ),
+              const SizedBox(height: 20),
+              _buildList(context),
+            ],
+          ),
         ),
       ),
     );
@@ -105,18 +109,19 @@ class _UserScreenState extends State<UserScreen> {
                           style: Theme.of(context).textTheme.titleLarge),
                       Text('Email: ${user.email}'),
                       Text('CPF: ${user.cpf}'),
-                      // Text('Quantidade de Compras: ${user.quantidadeDeCompras}'),
+                      Text('Role: ${user.role.nome}'),
+                      Text('Quantidade de Compras: ${user.quantidadeDeCompras}'),
                       ButtonBar(
                         alignment: MainAxisAlignment.end,
                         children: [
                           IconButton(
                             icon: const Icon(Icons.edit),
-                            onPressed: () => _openEditUserForm(context, user, jwt!, role!),
+                            onPressed: () => _openEditUserForm(context, user),
                           ),
-                          IconButton(
-                            icon: const Icon(Icons.delete),
-                            onPressed: () => _deleteUser(user.id),
-                          ),
+                          // IconButton(
+                          //   icon: const Icon(Icons.delete),
+                          //   onPressed: () => _deleteUser(user.id),
+                          // ),
                         ],
                       ),
                     ],
@@ -140,19 +145,8 @@ class _UserScreenState extends State<UserScreen> {
       );
 
       if (response.statusCode == 201 && _isMounted) {
-        print(response.data.usuarios);
-        final List<dynamic> responseData = response.data.usuarios;
-        return responseData
-            .map((json) => User(
-                  id: json['id'],
-                  empresa: json['idEmpresa'],
-                  nome: json['nome'] ?? '',
-                  email: json['email'] ?? '',
-                  role: json['roles'] ?? 0,
-                  cpf: json['cpf'] ?? '',
-                  quantidadeDeCompras: json['quantidadeDeCompras'] ?? 0
-                ))
-            .toList();
+        final List<dynamic> responseData = response.data['usuarios'];
+        return responseData.map((json) => User.fromJson(json)).toList();
       } else {
         throw Exception('Failed to load users');
       }
@@ -192,7 +186,7 @@ class _UserScreenState extends State<UserScreen> {
     );
   }
 
-  void _openEditUserForm(BuildContext context, User user, String jwt, String role) {
+  void _openEditUserForm(BuildContext context, User user) {
     showDialog(
       context: context,
       builder: (BuildContext context) {
@@ -204,8 +198,7 @@ class _UserScreenState extends State<UserScreen> {
                 width: 600,
                 child: EditUserForm(
                   user: user,
-                  jwt: jwt,
-                  role: role,
+                  jwt: jwt!,
                   onFormSubmitted: () {
                     setState(() {
                       _userFuture = _fetchUsers();
@@ -221,27 +214,29 @@ class _UserScreenState extends State<UserScreen> {
     );
   }
 
-  void _deleteUser(int userId) async {
-    try {
-      final dio = Dio();
-      final options = Options(headers: {'jwt': jwt});
-      final response = await dio.put(
-        'http://localhost:3000/users/$userId?roleUser=$role',
-        data: {'desabilitado': true},
-        options: options,
-      );
 
-      if (response.statusCode == 200) {
-        setState(() {
-          _userFuture = _fetchUsers();
-        });
-      } else {
-        // Handle error
-      }
-    } catch (error) {
-      // Handle error
-    }
-  }
+
+  // void _deleteUser(int userId) async {
+  //   try {
+  //     final dio = Dio();
+  //     final options = Options(headers: {'jwt': jwt});
+  //     final response = await dio.put(
+  //       'http://localhost:3000/users/$userId?roleUser=$role',
+  //       data: {'desabilitado': true},
+  //       options: options,
+  //     );
+
+  //     if (response.statusCode == 200) {
+  //       setState(() {
+  //         _userFuture = _fetchUsers();
+  //       });
+  //     } else {
+  //       // Handle error
+  //     }
+  //   } catch (error) {
+  //     // Handle error
+  //   }
+  // }
 }
 
 class UserForm extends StatefulWidget {
@@ -258,10 +253,43 @@ class _UserFormState extends State<UserForm> {
   final _nameController = TextEditingController();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
-  final _cpfController = TextEditingController();
-  final _idEmpresaController = TextEditingController();
-  final _rolesController = TextEditingController();
-  final _quantidadeDeComprasController = TextEditingController();
+  final _cpfController = MaskedTextController(mask: '000.000.000-00');
+
+  List<Empresa> _empresas = [];
+  List<Role> _roles = [];
+  Empresa? _selectedEmpresa;
+  Role? _selectedRole;
+  bool _isCliente = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchEmpresasAndRoles();
+  }
+
+  Future<void> _fetchEmpresasAndRoles() async {
+    try {
+      final dio = Dio();
+      final empresaResponse = await dio.get('http://localhost:3300/empresas/');
+      final roleResponse = await dio.get('http://localhost:3300/roles/');
+
+      if (empresaResponse.statusCode == 201) {
+        final empresaData = empresaResponse.data;
+        setState(() {
+          _empresas = (empresaData['empresas'] as List).map((json) => Empresa.fromJson(json)).toList();
+        });
+      }
+
+      if (roleResponse.statusCode == 201) {
+        final roleData = roleResponse.data;
+        setState(() {
+          _roles = (roleData['roles'] as List).map((json) => Role.fromJson(json)).toList();
+        });
+      }
+    } catch (error) {
+      // Handle error
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -270,6 +298,43 @@ class _UserFormState extends State<UserForm> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+          DropdownButtonFormField<Role>(
+            value: _selectedRole,
+            hint: const Text('Selecione o Cargo'),
+            items: _roles.map((role) {
+              return DropdownMenuItem<Role>(
+                value: role,
+                child: Text(role.nome),
+              );
+            }).toList(),
+            onChanged: (value) {
+              setState(() {
+                _selectedRole = value;
+                _isCliente = value?.nome == "CLIENTE";
+              });
+            },
+            validator: (value) {
+              if (value == null) {
+                return 'Por favor, selecione o cargo';
+              }
+              return null;
+            },
+          ),
+          DropdownButtonFormField<Empresa>(
+            value: _selectedEmpresa,
+            hint: const Text('Selecione a Empresa (opcional)'),
+            items: _empresas.map((empresa) {
+              return DropdownMenuItem<Empresa>(
+                value: empresa,
+                child: Text(empresa.nome),
+              );
+            }).toList(),
+            onChanged: (value) {
+              setState(() {
+                _selectedEmpresa = value;
+              });
+            },
+          ),
           TextFormField(
             controller: _nameController,
             decoration: const InputDecoration(labelText: 'Nome'),
@@ -290,17 +355,18 @@ class _UserFormState extends State<UserForm> {
               return null;
             },
           ),
-          TextFormField(
-            controller: _passwordController,
-            decoration: const InputDecoration(labelText: 'Senha'),
-            obscureText: true,
-            validator: (value) {
-              if (value == null || value.isEmpty) {
-                return 'Por favor, insira a senha';
-              }
-              return null;
-            },
-          ),
+          if (!_isCliente)
+            TextFormField(
+              controller: _passwordController,
+              decoration: const InputDecoration(labelText: 'Senha'),
+              obscureText: true,
+              validator: (value) {
+                if (value == null || value.isEmpty) {
+                  return 'Por favor, insira a senha';
+                }
+                return null;
+              },
+            ),
           TextFormField(
             controller: _cpfController,
             decoration: const InputDecoration(labelText: 'CPF'),
@@ -310,25 +376,6 @@ class _UserFormState extends State<UserForm> {
               }
               return null;
             },
-          ),
-          TextFormField(
-            controller: _idEmpresaController,
-            decoration: const InputDecoration(labelText: 'ID Empresa'),
-          ),
-          TextFormField(
-            controller: _rolesController,
-            decoration: const InputDecoration(labelText: 'Roles'),
-            validator: (value) {
-              if (value == null || value.isEmpty) {
-                return 'Por favor, insira os Roles';
-              }
-              return null;
-            },
-          ),
-          TextFormField(
-            controller: _quantidadeDeComprasController,
-            decoration: const InputDecoration(labelText: 'Quantidade de Compras'),
-            keyboardType: TextInputType.number,
           ),
           const SizedBox(height: 20),
           ElevatedButton(
@@ -352,14 +399,10 @@ class _UserFormState extends State<UserForm> {
           data: {
             'nome': _nameController.text,
             'email': _emailController.text,
-            'senha': _passwordController.text,
+            'senha': _isCliente ? '123456789' : _passwordController.text,
             'cpf': _cpfController.text,
-            'idEmpresa': _idEmpresaController.text.isEmpty 
-              ? null : int.parse(_idEmpresaController.text),
-            'roles': int.parse(_rolesController.text),
-            'quantidadeDeCompras': _quantidadeDeComprasController.text.isEmpty
-              ? null
-              : int.parse(_quantidadeDeComprasController.text),
+            'idEmpresa': _selectedEmpresa?.id,
+            'roles': _selectedRole?.id,
           },
         );
 
@@ -380,9 +423,6 @@ class _UserFormState extends State<UserForm> {
     _emailController.dispose();
     _passwordController.dispose();
     _cpfController.dispose();
-    _idEmpresaController.dispose();
-    _rolesController.dispose();
-    _quantidadeDeComprasController.dispose();
     super.dispose();
   }
 }
@@ -390,14 +430,12 @@ class _UserFormState extends State<UserForm> {
 class EditUserForm extends StatefulWidget {
   final User user;
   final String jwt;
-  final String role;
   final Function onFormSubmitted;
 
   const EditUserForm({
     super.key,
     required this.user,
     required this.jwt,
-    required this.role,
     required this.onFormSubmitted,
   });
 
@@ -407,24 +445,92 @@ class EditUserForm extends StatefulWidget {
 
 class _EditUserFormState extends State<EditUserForm> {
   final _formKey = GlobalKey<FormState>();
-  late TextEditingController _nameController;
-  late TextEditingController _emailController;
-  late TextEditingController _cpfController;
-  late TextEditingController _idEmpresaController;
-  late TextEditingController _rolesController;
-  late TextEditingController _quantidadeDeComprasController;
+  final _nameController = TextEditingController();
+  final _emailController = TextEditingController();
+  final _passwordController = TextEditingController();
+  final _cpfController = MaskedTextController(mask: '000.000.000-00');
+  
+  final List<Empresa> _empresas = [];
+  final List<Role> _roles = [];
+  Empresa? _selectedEmpresa;
+  Role? _selectedRole;
+  bool _isCliente = false;
+  bool _alterarSenha = false;
 
   @override
   void initState() {
     super.initState();
-    _nameController = TextEditingController(text: widget.user.nome);
-    _emailController = TextEditingController(text: widget.user.email);
-    _cpfController = TextEditingController(text: widget.user.cpf);
-    _idEmpresaController = TextEditingController(text: widget.user.empresa);
-    _rolesController = TextEditingController(text: widget.user.role);
-    _quantidadeDeComprasController = TextEditingController(
-      text: widget.user.quantidadeDeCompras.toString(),
-    );
+    _nameController.text = widget.user.nome;
+    _emailController.text = widget.user.email;
+    _cpfController.text = widget.user.cpf;
+    _isCliente = widget.user.role.nome == "CLIENTE";
+    _fetchEmpresasAndRoles().then((_) {
+      setState(() {
+        _selectedEmpresa = widget.user.empresa;
+        _selectedRole = widget.user.role;
+      });
+    });
+  }
+
+  Future<void> _fetchEmpresasAndRoles() async {
+    try {
+      final dio = Dio();
+      final empresaResponse = await dio.get('http://localhost:3300/empresas/');
+      final roleResponse = await dio.get('http://localhost:3300/roles/');
+
+      if (empresaResponse.statusCode == 201) {
+        final empresaData = empresaResponse.data;
+        setState(() {
+          _empresas.addAll(
+            (empresaData['empresas'] as List)
+                .map((json) => Empresa.fromJson(json))
+                .toList(),
+          );
+        });
+      }
+
+      if (roleResponse.statusCode == 201) {
+        final roleData = roleResponse.data;
+        setState(() {
+          _roles.addAll(
+            (roleData['roles'] as List)
+                .map((json) => Role.fromJson(json))
+                .toList(),
+          );
+        });
+      }
+    } catch (error) {
+      // Handle error
+    }
+  }
+
+  Future<void> _submitForm() async {
+    if (_formKey.currentState!.validate()) {
+      try {
+        final dio = Dio();
+        final response = await dio.patch(
+          'http://localhost:3300/users/update/',
+          data: {
+            'id': widget.user.id,
+            'nome': _nameController.text,
+            'email': _emailController.text,
+            'senha': _passwordController.text,
+            'cpf': _cpfController.text,
+            'idEmpresa': _selectedEmpresa?.id,
+            'roles': _selectedRole?.id,
+          },
+          options: Options(headers: {'JWT': widget.jwt}),
+        );
+
+        if (response.statusCode == 201) {
+          widget.onFormSubmitted();
+        } else {
+          // Handle error
+        }
+      } catch (error) {
+        // Handle error
+      }
+    }
   }
 
   @override
@@ -434,6 +540,43 @@ class _EditUserFormState extends State<EditUserForm> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+          DropdownButtonFormField<Role>(
+            value: _selectedRole,
+            hint: const Text('Selecione o Cargo'),
+            items: _roles.map((role) {
+              return DropdownMenuItem<Role>(
+                value: role,
+                child: Text(role.nome),
+              );
+            }).toList(),
+            onChanged: (value) {
+              setState(() {
+                _selectedRole = value;
+                _isCliente = value?.nome == "CLIENTE";
+              });
+            },
+            validator: (value) {
+              if (value == null) {
+                return 'Por favor, selecione um cargo';
+              }
+              return null;
+            },
+          ),
+          DropdownButtonFormField<Empresa>(
+            value: _selectedEmpresa,
+            hint: const Text('Selecione a Empresa (opcional)'),
+            items: _empresas.map((empresa) {
+              return DropdownMenuItem<Empresa>(
+                value: empresa,
+                child: Text(empresa.nome),
+              );
+            }).toList(),
+            onChanged: (value) {
+              setState(() {
+                _selectedEmpresa = value;
+              });
+            },
+          ),
           TextFormField(
             controller: _nameController,
             decoration: const InputDecoration(labelText: 'Nome'),
@@ -454,78 +597,101 @@ class _EditUserFormState extends State<EditUserForm> {
               return null;
             },
           ),
-          TextFormField(
-            controller: _cpfController,
-            decoration: const InputDecoration(labelText: 'CPF'),
-            validator: (value) {
-              if (value == null || value.isEmpty) {
-                return 'Por favor, insira o CPF';
-              }
-              return null;
-            },
-          ),
-          TextFormField(
-            controller: _idEmpresaController,
-            decoration: const InputDecoration(labelText: 'ID Empresa'),
-          ),
-          TextFormField(
-            controller: _rolesController,
-            decoration: const InputDecoration(labelText: 'Roles'),
-            validator: (value) {
-              if (value == null || value.isEmpty) {
-                return 'Por favor, insira os Roles';
-              }
-              return null;
-            },
-          ),
-          TextFormField(
-            controller: _quantidadeDeComprasController,
-            decoration: const InputDecoration(labelText: 'Quantidade de Compras'),
-            keyboardType: TextInputType.number,
-          ),
+          if(!_isCliente)
+            SwitchListTile(
+              title: const Text('Quero alterar a senha'),
+              value: _alterarSenha,
+              onChanged: (value) {
+                setState(() {
+                  _alterarSenha = value;
+                });
+              },
+            ),
+          if (!_isCliente && _alterarSenha)
+            TextFormField(
+              controller: _passwordController,
+              decoration: const InputDecoration(labelText: 'Alterar Senha'),
+              obscureText: true,
+              validator: (value) {
+                if (_alterarSenha && (value == null || value.isEmpty)) {
+                  return 'Por favor, insira a senha';
+                }
+                return null;
+              },
+            ),
           const SizedBox(height: 20),
           ElevatedButton(
-            onPressed: () {
-              if (_formKey.currentState!.validate()) {
-                _submitForm();
-              }
-            },
+            onPressed: _submitForm,
             child: const Text('Atualizar Usuário'),
           ),
         ],
       ),
     );
   }
+}
 
-  Future<void> _submitForm() async {
-    final dio = Dio();
+class Role {
+  final int id;
+  final String nome;
 
-    final updatedUser = User(
-      id: widget.user.id,
-      nome: _nameController.text,
-      email: _emailController.text,
-      cpf: _cpfController.text,
-      empresa: _idEmpresaController.text,
-      role: _rolesController.text,
-      quantidadeDeCompras: int.tryParse(_quantidadeDeComprasController.text) ?? 0,
+  Role({
+    required this.id,
+    required this.nome,
+  });
+
+  factory Role.fromJson(Map<String, dynamic> json) {
+    return Role(
+      id: json['id'],
+      nome: json['nome'],
     );
-
-    try {
-      final response = await dio.put(
-        'http://localhost:3000/users/${widget.user.id}?roleUser=${widget.role}',
-        data: updatedUser.toJson(),
-        options: Options(headers: {'jwt': widget.jwt}),
-      );
-
-      if (response.statusCode == 200) {
-        widget.onFormSubmitted();
-      } else {
-        // Handle error
-      }
-    } catch (error) {
-      // Handle error
-    }
   }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'nome': nome,
+    };
+  }
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is Role && runtimeType == other.runtimeType && id == other.id;
+
+  @override
+  int get hashCode => id.hashCode;
+}
+
+class Empresa {
+  final int id;
+  final String nome;
+
+  Empresa({
+    required this.id,
+    required this.nome,
+  });
+
+  factory Empresa.fromJson(Map<String, dynamic> json) {
+    return Empresa(
+      id: json['id'],
+      nome: json['nome'],
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'nome': nome,
+    };
+  }
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is Empresa && runtimeType == other.runtimeType && id == other.id;
+
+  @override
+  int get hashCode => id.hashCode;
 }
 
 class User {
@@ -533,18 +699,18 @@ class User {
   final String nome;
   final String email;
   final String cpf;
-  final String empresa;
-  final String role;
-  final int quantidadeDeCompras;
+  final Empresa? empresa;
+  final Role role;
+  final int? quantidadeDeCompras;
 
   User({
     required this.id,
     required this.nome,
     required this.email,
     required this.cpf,
-    required this.empresa,
+    this.empresa,
     required this.role,
-    required this.quantidadeDeCompras,
+    this.quantidadeDeCompras,
   });
 
   factory User.fromJson(Map<String, dynamic> json) {
@@ -553,9 +719,11 @@ class User {
       nome: json['nome'],
       email: json['email'],
       cpf: json['cpf'],
-      empresa: json['idEmpresa'],
-      role: json['role'],
-      quantidadeDeCompras: json['quantidadeDeCompras'],
+      empresa: json['empresa'] != null
+          ? Empresa.fromJson(json['empresa'])
+          : null,
+      role: Role.fromJson(json['role']),
+      quantidadeDeCompras: json['quantidadeDeCompras'] ?? 0,
     );
   }
 
