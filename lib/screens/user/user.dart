@@ -53,7 +53,6 @@ class _UserScreenState extends State<UserScreen> {
       body: Padding(
         padding: const EdgeInsets.all(20.0),
         child: SingleChildScrollView(
-
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
@@ -66,7 +65,8 @@ class _UserScreenState extends State<UserScreen> {
                       onPressed: () {
                         _openCreateUserForm(context);
                       },
-                      child: const Text('Criar Usuário', style: TextStyle(fontSize: 12)),
+                      child: const Text('Criar Usuário',
+                          style: TextStyle(fontSize: 12)),
                     ),
                   ),
                 ],
@@ -110,7 +110,8 @@ class _UserScreenState extends State<UserScreen> {
                       Text('Email: ${user.email}'),
                       Text('CPF: ${user.cpf}'),
                       Text('Role: ${user.role.nome}'),
-                      Text('Quantidade de Compras: ${user.quantidadeDeCompras}'),
+                      Text(
+                          'Quantidade de Compras: ${user.quantidadeDeCompras}'),
                       ButtonBar(
                         alignment: MainAxisAlignment.end,
                         children: [
@@ -138,7 +139,7 @@ class _UserScreenState extends State<UserScreen> {
   Future<List<User>> _fetchUsers() async {
     try {
       final dio = Dio();
-      final options = Options(headers: {'JWT': jwt});
+      final options = Options(headers: {'jwt-access': jwt});
       final response = await dio.get(
         'http://localhost:3300/users/',
         options: options,
@@ -177,6 +178,7 @@ class _UserScreenState extends State<UserScreen> {
                     });
                     Navigator.of(context).pop();
                   },
+                  jwt: jwt!
                 ),
               ),
             ),
@@ -214,8 +216,6 @@ class _UserScreenState extends State<UserScreen> {
     );
   }
 
-
-
   // void _deleteUser(int userId) async {
   //   try {
   //     final dio = Dio();
@@ -241,8 +241,9 @@ class _UserScreenState extends State<UserScreen> {
 
 class UserForm extends StatefulWidget {
   final Function onFormSubmitted;
+  final String jwt;
 
-  const UserForm({super.key, required this.onFormSubmitted});
+  const UserForm({super.key, required this.onFormSubmitted, required this.jwt});
 
   @override
   _UserFormState createState() => _UserFormState();
@@ -270,20 +271,25 @@ class _UserFormState extends State<UserForm> {
   Future<void> _fetchEmpresasAndRoles() async {
     try {
       final dio = Dio();
-      final empresaResponse = await dio.get('http://localhost:3300/empresas/');
-      final roleResponse = await dio.get('http://localhost:3300/roles/');
+      final options = Options(headers: {'jwt-access': widget.jwt});
+      final empresaResponse = await dio.get('http://localhost:3300/empresas/', options: options,);
+      final roleResponse = await dio.get('http://localhost:3300/roles/', options: options,);
 
       if (empresaResponse.statusCode == 201) {
         final empresaData = empresaResponse.data;
         setState(() {
-          _empresas = (empresaData['empresas'] as List).map((json) => Empresa.fromJson(json)).toList();
+          _empresas = (empresaData['empresas'] as List)
+              .map((json) => Empresa.fromJson(json))
+              .toList();
         });
       }
 
       if (roleResponse.statusCode == 201) {
         final roleData = roleResponse.data;
         setState(() {
-          _roles = (roleData['roles'] as List).map((json) => Role.fromJson(json)).toList();
+          _roles = (roleData['roles'] as List)
+              .map((json) => Role.fromJson(json))
+              .toList();
         });
       }
     } catch (error) {
@@ -394,6 +400,7 @@ class _UserFormState extends State<UserForm> {
   Future<void> _submitForm() async {
     if (_formKey.currentState!.validate()) {
       try {
+        final options = Options(headers: {'jwt-access': widget.jwt});
         final response = await Dio().post(
           'http://localhost:3300/users/register/',
           data: {
@@ -404,6 +411,7 @@ class _UserFormState extends State<UserForm> {
             'idEmpresa': _selectedEmpresa?.id,
             'roles': _selectedRole?.id,
           },
+          options: options,
         );
 
         if (response.statusCode == 201) {
@@ -449,7 +457,7 @@ class _EditUserFormState extends State<EditUserForm> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _cpfController = MaskedTextController(mask: '000.000.000-00');
-  
+
   final List<Empresa> _empresas = [];
   final List<Role> _roles = [];
   Empresa? _selectedEmpresa;
@@ -475,8 +483,9 @@ class _EditUserFormState extends State<EditUserForm> {
   Future<void> _fetchEmpresasAndRoles() async {
     try {
       final dio = Dio();
-      final empresaResponse = await dio.get('http://localhost:3300/empresas/');
-      final roleResponse = await dio.get('http://localhost:3300/roles/');
+      final options = Options(headers: {'jwt-access': widget.jwt});
+      final empresaResponse = await dio.get('http://localhost:3300/empresas/', options: options,);
+      final roleResponse = await dio.get('http://localhost:3300/roles/', options: options,);
 
       if (empresaResponse.statusCode == 201) {
         final empresaData = empresaResponse.data;
@@ -519,7 +528,7 @@ class _EditUserFormState extends State<EditUserForm> {
             'idEmpresa': _selectedEmpresa?.id,
             'roles': _selectedRole?.id,
           },
-          options: Options(headers: {'JWT': widget.jwt}),
+          options: Options(headers: {'jwt-access': widget.jwt}),
         );
 
         if (response.statusCode == 201) {
@@ -597,7 +606,7 @@ class _EditUserFormState extends State<EditUserForm> {
               return null;
             },
           ),
-          if(!_isCliente)
+          if (!_isCliente)
             SwitchListTile(
               title: const Text('Quero alterar a senha'),
               value: _alterarSenha,
@@ -719,9 +728,8 @@ class User {
       nome: json['nome'],
       email: json['email'],
       cpf: json['cpf'],
-      empresa: json['empresa'] != null
-          ? Empresa.fromJson(json['empresa'])
-          : null,
+      empresa:
+          json['empresa'] != null ? Empresa.fromJson(json['empresa']) : null,
       role: Role.fromJson(json['role']),
       quantidadeDeCompras: json['quantidadeDeCompras'] ?? 0,
     );

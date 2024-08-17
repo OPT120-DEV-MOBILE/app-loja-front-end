@@ -65,6 +65,13 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                   const SizedBox(height: 20),
                   ElevatedButton(
+                    onPressed: () {
+                      Navigator.pushNamed(context, '/empresas');
+                    },
+                    child: const Text('Empresas'),
+                  ),
+                  const SizedBox(height: 20),
+                  ElevatedButton(
                     onPressed: _clearStoredValues,
                     child: const Text('Sair'),
                   ),

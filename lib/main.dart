@@ -1,3 +1,4 @@
+import 'package:app_lojas/screens/empresa/empresa.dart';
 import 'package:app_lojas/screens/home/home.dart';
 import 'package:app_lojas/screens/login/login.dart';
 import 'package:app_lojas/screens/user/user.dart';
@@ -23,6 +24,7 @@ class MyApp extends StatelessWidget {
           },
         ),
         '/user': (context) => const UserScreen(),
+        '/empresas': (context) => const EmpresaScreen(),
       },
     );
   }
