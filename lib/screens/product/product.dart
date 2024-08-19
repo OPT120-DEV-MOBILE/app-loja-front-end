@@ -1,7 +1,10 @@
+// ignore_for_file: library_private_types_in_public_api, use_build_context_synchronously
+
 import 'package:intl/intl.dart';
 import 'package:flutter/material.dart';
 import 'package:dio/dio.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:fluttertoast/fluttertoast.dart';
 
 class ProductScreen extends StatefulWidget {
   const ProductScreen({super.key});
@@ -16,6 +19,7 @@ class _ProductScreenState extends State<ProductScreen> {
 
   String? jwt;
   String? role;
+  String? idUsuario;
 
   @override
   void initState() {
@@ -33,6 +37,7 @@ class _ProductScreenState extends State<ProductScreen> {
     setState(() {
       jwt = prefs.getString('token');
       role = prefs.getString('role');
+      idUsuario = prefs.getString('idUsuario');
     });
   }
 
@@ -85,7 +90,6 @@ class _ProductScreenState extends State<ProductScreen> {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(child: CircularProgressIndicator());
         } else if (snapshot.hasError) {
-          print(snapshot.hasError);
           return Center(child: Text('Erro: ${snapshot.error}'));
         } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
           return const Center(child: Text('Nenhum produto encontrado'));
@@ -145,12 +149,12 @@ class _ProductScreenState extends State<ProductScreen> {
       final dio = Dio();
       final options = Options(headers: {'JWT': jwt});
       final response = await dio.get(
-        'http://localhost:3000/exemplo',
+        'http://localhost:3300/produtos/',
         options: options,
       );
       // print(response);
       if (response.statusCode == 201 && _isMounted) {
-        final List<dynamic> responseData = response.data['produtos'];
+        final List<dynamic> responseData = response.data['Produtos'];
         return responseData.map((json) => Product.fromJson(json)).toList();
       } else {
         throw Exception('Failed to load products');
@@ -298,7 +302,6 @@ class _ProductFormState extends State<ProductForm> {
           TextFormField(
             controller: _descriptionController,
             decoration: const InputDecoration(labelText: 'Descrição'),
-            obscureText: true,
             validator: (value) {
               if (value == null || value.isEmpty) {
                 return 'Por favor, insira a descrição';
@@ -385,25 +388,56 @@ class _ProductFormState extends State<ProductForm> {
   Future<void> _submitForm() async {
     if (_formKey.currentState!.validate()) {
       try {
+        final preco = double.tryParse(_precoController.text.replaceAll(',', '.')) ?? 0.0;
+        final quantidade = int.tryParse(_amountController.text) ?? 0;
+        final dataDeFabricacao = _dateFabricacao != null
+          ? '${DateFormat('yyyy-MM-ddTHH:mm:ss').format(_dateFabricacao!.toUtc())}Z'
+          : '';
+        final dataDeValidade = _dateValidade != null
+          ? '${DateFormat('yyyy-MM-ddTHH:mm:ss').format(_dateValidade!.toUtc())}Z'
+          : '';
+          
         final response = await Dio().post(
-          'http://localhost:3300/users/register/',
+          'http://localhost:3300/produtos/',
           data: {
             'nome': _nameController.text,
-            'preco': _precoController.text,
+            'preco': preco,
             'descricao': _descriptionController.text,
-            'quantidade': _amountController.text,
-            'dataDeFabricacao': _dataDeFabricacaoController.text,
-            'dataDeValidade': _dataDeValidadeController.text
+            'quantidade': quantidade,
+            'dataDeFabricacao': dataDeFabricacao,
+            'dataDeValidade': dataDeValidade
           },
         );
 
         if (response.statusCode == 201) {
+          Fluttertoast.showToast(
+            msg: "Produto Cadastrado com sucesso!",
+            toastLength: Toast.LENGTH_SHORT,
+            gravity: ToastGravity.TOP,
+            backgroundColor: Colors.red,
+            textColor: Colors.white,
+            fontSize: 16.0,
+          );
           widget.onFormSubmitted();
         } else {
-          // Handle error
+          Fluttertoast.showToast(
+            msg: "Erro ao cadatrar Produto, verifique os dados!",
+            toastLength: Toast.LENGTH_SHORT,
+            gravity: ToastGravity.TOP,
+            backgroundColor: Colors.red,
+            textColor: Colors.white,
+            fontSize: 16.0,
+          );
         }
       } catch (error) {
-        // Handle error
+        Fluttertoast.showToast(
+          msg: "Erro ao cadatrar Produto, verifique a conexão com o banco de dados!",
+          toastLength: Toast.LENGTH_SHORT,
+          gravity: ToastGravity.TOP,
+          backgroundColor: Colors.red,
+          textColor: Colors.white,
+          fontSize: 16.0,
+        );
       }
     }
   }
@@ -445,42 +479,81 @@ class _EditProductFormState extends State<EditProductForm> {
   final _dataDeFabricacaoController = TextEditingController();
   final _dataDeValidadeController = TextEditingController();
 
+  DateTime? _dateFabricacao;
+  DateTime? _dateValidade;
+
   @override
   void initState() {
     super.initState();
     _nameController.text = widget.product.nome;
     _precoController.text = widget.product.preco.toString();
+    _descriptionController.text = widget.product.descricao;
     _amountController.text = widget.product.quantidade.toString();
-    _dataDeFabricacaoController.text =
-        widget.product.dataDeFabricacao.toString();
-    _dataDeValidadeController.text = widget.product.dataDeValidade.toString();
+    _dateFabricacao = widget.product.dataDeFabricacao;
+    _dateValidade = widget.product.dataDeValidade;
+    _dataDeFabricacaoController.text = DateFormat('yyyy-MM-dd').format(_dateFabricacao ?? DateTime.now());
+    _dataDeValidadeController.text = DateFormat('yyyy-MM-dd').format(_dateValidade ?? DateTime.now());
   }
 
-  Future<void> _submitForm() async {
+  Future<void> _submitUpdateForm() async {
     if (_formKey.currentState!.validate()) {
       try {
+        // Formata o preço e a quantidade
+        final preco = double.tryParse(_precoController.text.replaceAll(',', '.')) ?? 0.0;
+        final quantidade = int.tryParse(_amountController.text) ?? 0;
+
+        // Formata as datas no formato ISO-8601 com timezone UTC
+        final dataDeFabricacao = _dateFabricacao != null
+          ? '${DateFormat('yyyy-MM-ddTHH:mm:ss').format(_dateFabricacao!.toUtc())}Z'
+          : null;
+        final dataDeValidade = _dateValidade != null
+          ? '${DateFormat('yyyy-MM-ddTHH:mm:ss').format(_dateValidade!.toUtc())}Z'
+          : null;
+
         final dio = Dio();
-        final response = await dio.patch(
-          'http://localhost:3300/users/update/',
+        final response = await dio.put(
+          'http://localhost:3300/produtos/',
           data: {
             'id': widget.product.id,
             'nome': _nameController.text,
-            'preco': _precoController.text,
+            'preco': preco,
             'descricao': _descriptionController.text,
-            'quantidade': _amountController.text,
-            'dataDeFabricacao': _dataDeFabricacaoController,
-            'dataDeValidade': _dataDeValidadeController,
+            'quantidade': quantidade,
+            'dataDeFabricacao': dataDeFabricacao,
+            'dataDeValidade': dataDeValidade
           },
           options: Options(headers: {'JWT': widget.jwt}),
         );
 
         if (response.statusCode == 201) {
+          Fluttertoast.showToast(
+            msg: "Produto Editado com sucesso!",
+            toastLength: Toast.LENGTH_SHORT,
+            gravity: ToastGravity.TOP,
+            backgroundColor: Colors.red,
+            textColor: Colors.white,
+            fontSize: 16.0,
+          );
           widget.onFormSubmitted();
         } else {
-          // Handle error
+          Fluttertoast.showToast(
+            msg: "Erro ao editar Produto, verifique os dados!",
+            toastLength: Toast.LENGTH_SHORT,
+            gravity: ToastGravity.TOP,
+            backgroundColor: Colors.red,
+            textColor: Colors.white,
+            fontSize: 16.0,
+          );
         }
       } catch (error) {
-        // Handle error
+        Fluttertoast.showToast(
+          msg: "Erro ao editar Produto, verifique a conexão com o banco de dados!",
+          toastLength: Toast.LENGTH_SHORT,
+          gravity: ToastGravity.TOP,
+          backgroundColor: Colors.red,
+          textColor: Colors.white,
+          fontSize: 16.0,
+        );
       }
     }
   }
@@ -515,7 +588,6 @@ class _EditProductFormState extends State<EditProductForm> {
           TextFormField(
             controller: _descriptionController,
             decoration: const InputDecoration(labelText: 'Descrição'),
-            obscureText: true,
             validator: (value) {
               if (value == null || value.isEmpty) {
                 return 'Por favor, insira a descrição';
@@ -528,7 +600,7 @@ class _EditProductFormState extends State<EditProductForm> {
             decoration: const InputDecoration(labelText: 'Quantidade'),
             validator: (value) {
               if (value == null || value.isEmpty) {
-                return 'Por favor, insira o quantidade';
+                return 'Por favor, insira a quantidade';
               }
               return null;
             },
@@ -551,9 +623,9 @@ class _EditProductFormState extends State<EditProductForm> {
               if (pickeddate != null) {
                 setState(
                   () {
-                    // _dateFabricacao = pickeddate;
+                    _dateFabricacao = pickeddate;
                     _dataDeFabricacaoController.text =
-                        DateFormat('dd-MM-yyyy').format(pickeddate);
+                        DateFormat('yyyy-MM-dd').format(pickeddate);
                   },
                 );
               }
@@ -577,9 +649,9 @@ class _EditProductFormState extends State<EditProductForm> {
               if (pickeddate != null) {
                 setState(
                   () {
-                    // _dateValidade = pickeddate;
+                    _dateValidade = pickeddate;
                     _dataDeValidadeController.text =
-                        DateFormat('dd-MM-yyyy').format(pickeddate);
+                        DateFormat('yyyy-MM-dd').format(pickeddate);
                   },
                 );
               }
@@ -587,7 +659,7 @@ class _EditProductFormState extends State<EditProductForm> {
           ),
           const SizedBox(height: 20),
           ElevatedButton(
-            onPressed: _submitForm,
+            onPressed: _submitUpdateForm,
             child: const Text('Atualizar Produto'),
           ),
         ],

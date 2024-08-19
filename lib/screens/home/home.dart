@@ -11,7 +11,8 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   String? jwt;
-  // String? role;
+  String? role;
+  String? idUsuario;
 
   @override
   void initState() {
@@ -23,17 +24,20 @@ class _HomeScreenState extends State<HomeScreen> {
     final prefs = await SharedPreferences.getInstance();
     setState(() {
       jwt = prefs.getString('token');
-      // role = prefs.getString('role');
+      role = prefs.getString('role');
+      idUsuario = prefs.getString('idUsuario');
     });
   }
 
   Future<void> _clearStoredValues() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove('token');
-    // await prefs.remove('role');
+    await prefs.remove('role');
+    await prefs.remove('idUsuario');
     setState(() {
       jwt = null;
-      // role = null;
+      role = null;
+      idUsuario = null;
     });
   }
 
@@ -69,6 +73,20 @@ class _HomeScreenState extends State<HomeScreen> {
                       Navigator.pushNamed(context, '/empresas');
                     },
                     child: const Text('Empresas'),
+                  ),
+                  const SizedBox(height: 20),
+                  ElevatedButton(
+                    onPressed: () {
+                      Navigator.pushNamed(context, '/produtos');
+                    },
+                    child: const Text('Produtos'),
+                  ),
+                  const SizedBox(height: 20),
+                  ElevatedButton(
+                    onPressed: () {
+                      Navigator.pushNamed(context, '/vendas');
+                    },
+                    child: const Text('Vendas'),
                   ),
                   const SizedBox(height: 20),
                   ElevatedButton(

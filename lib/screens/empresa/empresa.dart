@@ -18,6 +18,8 @@ class _EmpresaScreenState extends State<EmpresaScreen> {
 
   String? jwt;
   String? role;
+  String? idUsuario;
+
 
   @override
   void initState() {
@@ -35,6 +37,7 @@ class _EmpresaScreenState extends State<EmpresaScreen> {
     setState(() {
       jwt = prefs.getString('token');
       role = prefs.getString('role');
+      idUsuario = prefs.getString('idUsuario');
     });
   }
 
@@ -89,7 +92,7 @@ class _EmpresaScreenState extends State<EmpresaScreen> {
         } else if (snapshot.hasError) {
           return Center(child: Text('Erro: ${snapshot.error}'));
         } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
-          return const Center(child: Text('Nenhum usuário encontrado'));
+          return const Center(child: Text('Nenhuma empresa encontrada'));
         } else {
           final empresas = snapshot.data!;
           return ListView.builder(
@@ -255,17 +258,27 @@ class EmpresaForm extends StatefulWidget {
 class _EmpresaFormState extends State<EmpresaForm> {
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
-  final _tipoDocumentoController = TextEditingController();
-  final _numeroDocumentoController = MaskedTextController(mask: '00.000.000/0000-00');
+  final _tipoDocumentoController = TextEditingController(text: 'CNPJ');
+  late MaskedTextController _numeroDocumentoController;
   final _cepController = MaskedTextController(mask: '00000-000');
   final _enderecoController = TextEditingController();
   final _cidadeController = TextEditingController();
   final _estadoController = TextEditingController();
 
-
   @override
   void initState() {
     super.initState();
+    _numeroDocumentoController = MaskedTextController(mask: _tipoDocumentoController.text == 'CNPJ' ? '00.000.000/0000-00' : '000.000.000-00');
+
+    _tipoDocumentoController.addListener(() {
+      setState(() {
+        if (_tipoDocumentoController.text == 'CNPJ') {
+          _numeroDocumentoController.updateMask('00.000.000/0000-00');
+        } else if (_tipoDocumentoController.text == 'CPF') {
+          _numeroDocumentoController.updateMask('000.000.000-00');
+        }
+      });
+    });
   }
 
   @override
@@ -285,9 +298,18 @@ class _EmpresaFormState extends State<EmpresaForm> {
               return null;
             },
           ),
-          TextFormField(
-            controller: _tipoDocumentoController,
+          DropdownButtonFormField<String>(
+            value: _tipoDocumentoController.text,
             decoration: const InputDecoration(labelText: 'Tipo do Documento'),
+            items: const [
+              DropdownMenuItem(value: 'CNPJ', child: Text('CNPJ')),
+              DropdownMenuItem(value: 'CPF', child: Text('CPF')),
+            ],
+            onChanged: (value) {
+              if (value != null) {
+                _tipoDocumentoController.text = value;
+              }
+            },
             validator: (value) {
               if (value == null || value.isEmpty) {
                 return 'Por favor, insira o tipo do documento';
@@ -330,7 +352,7 @@ class _EmpresaFormState extends State<EmpresaForm> {
             decoration: const InputDecoration(labelText: 'Cidade'),
             validator: (value) {
               if (value == null || value.isEmpty) {
-                return 'Por favor, insira a cidedae da empresa';
+                return 'Por favor, insira a cidade da empresa';
               }
               return null;
             },
@@ -421,7 +443,7 @@ class _EditEmpresaFormState extends State<EditEmpresaForm> {
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
   final _tipoDocumentoController = TextEditingController();
-  final _numeroDocumentoController = MaskedTextController(mask: '00.000.000/0000-00');
+  late MaskedTextController _numeroDocumentoController;
   final _cepController = MaskedTextController(mask: '00000-000');
   final _enderecoController = TextEditingController();
   final _cidadeController = TextEditingController();
@@ -432,11 +454,24 @@ class _EditEmpresaFormState extends State<EditEmpresaForm> {
     super.initState();
     _nameController.text = widget.empresa.nome;
     _tipoDocumentoController.text = widget.empresa.tipoDocumento;
-    _numeroDocumentoController.text = widget.empresa.numeroDocumento;
+    _numeroDocumentoController = MaskedTextController(
+      mask: widget.empresa.tipoDocumento == 'CNPJ' ? '00.000.000/0000-00' : '000.000.000-00',
+      text: widget.empresa.numeroDocumento,
+    );
     _cepController.text = widget.empresa.cep;
     _enderecoController.text = widget.empresa.endereco;
     _cidadeController.text = widget.empresa.cidade;
     _estadoController.text = widget.empresa.estado;
+
+    _tipoDocumentoController.addListener(() {
+      setState(() {
+        if (_tipoDocumentoController.text == 'CNPJ') {
+          _numeroDocumentoController.updateMask('00.000.000/0000-00');
+        } else if (_tipoDocumentoController.text == 'CPF') {
+          _numeroDocumentoController.updateMask('000.000.000-00');
+        }
+      });
+    });
   }
 
   Future<void> _submitForm() async {
@@ -486,9 +521,18 @@ class _EditEmpresaFormState extends State<EditEmpresaForm> {
               return null;
             },
           ),
-          TextFormField(
-            controller: _tipoDocumentoController,
+          DropdownButtonFormField<String>(
+            value: _tipoDocumentoController.text,
             decoration: const InputDecoration(labelText: 'Tipo do Documento'),
+            items: const [
+              DropdownMenuItem(value: 'CNPJ', child: Text('CNPJ')),
+              DropdownMenuItem(value: 'CPF', child: Text('CPF')),
+            ],
+            onChanged: (value) {
+              if (value != null) {
+                _tipoDocumentoController.text = value;
+              }
+            },
             validator: (value) {
               if (value == null || value.isEmpty) {
                 return 'Por favor, insira o tipo do documento';
@@ -531,7 +575,7 @@ class _EditEmpresaFormState extends State<EditEmpresaForm> {
             decoration: const InputDecoration(labelText: 'Cidade'),
             validator: (value) {
               if (value == null || value.isEmpty) {
-                return 'Por favor, insira a cidedae da empresa';
+                return 'Por favor, insira a cidade da empresa';
               }
               return null;
             },
@@ -558,6 +602,18 @@ class _EditEmpresaFormState extends State<EditEmpresaForm> {
         ],
       ),
     );
+  }
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _tipoDocumentoController.dispose();
+    _numeroDocumentoController.dispose();
+    _cepController.dispose();
+    _enderecoController.dispose();
+    _cidadeController.dispose();
+    _estadoController.dispose();
+    super.dispose();
   }
 }
 

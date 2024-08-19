@@ -31,12 +31,14 @@ class _LoginScreenState extends State<LoginScreen> {
         if (response.statusCode == 201) {
           final responseData = response.data;
           final token = responseData['JWT'];
-          // final role = responseData['role'];
+          final role = responseData['roles'].toString();
+          final idUsuario = responseData['id'].toString();
 
           // Salvando o token e a role localmente
           final prefs = await SharedPreferences.getInstance();
           await prefs.setString('token', token);
-          // await prefs.setString('role', role);
+          await prefs.setString('role', role);
+          await prefs.setString('idUsuario', idUsuario);
 
           widget.onFormSubmitted();
         } else {

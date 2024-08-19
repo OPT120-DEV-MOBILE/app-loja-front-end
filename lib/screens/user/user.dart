@@ -18,6 +18,8 @@ class _UserScreenState extends State<UserScreen> {
 
   String? jwt;
   String? role;
+  String? idUsuario;
+
 
   @override
   void initState() {
@@ -35,6 +37,7 @@ class _UserScreenState extends State<UserScreen> {
     setState(() {
       jwt = prefs.getString('token');
       role = prefs.getString('role');
+      idUsuario = prefs.getString('idUsuario');
     });
   }
 
@@ -110,8 +113,9 @@ class _UserScreenState extends State<UserScreen> {
                       Text('Email: ${user.email}'),
                       Text('CPF: ${user.cpf}'),
                       Text('Role: ${user.role.nome}'),
-                      Text(
-                          'Quantidade de Compras: ${user.quantidadeDeCompras}'),
+                      if (user.role.nome != 'ADMIN') ...[
+                        Text('Quantidade de Compras: ${user.quantidadeDeCompras}'),
+                      ],
                       ButtonBar(
                         alignment: MainAxisAlignment.end,
                         children: [
