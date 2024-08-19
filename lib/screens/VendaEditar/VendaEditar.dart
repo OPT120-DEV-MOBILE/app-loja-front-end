@@ -6,7 +6,7 @@ import 'package:dropdown_search/dropdown_search.dart';
 import 'package:flutter_masked_text2/flutter_masked_text2.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:fluttertoast/fluttertoast.dart';
-import 'package:flutter/services.dart'; 
+import 'package:flutter/services.dart';
 
 class VendaEditarScreen extends StatefulWidget {
   final int id;
@@ -29,7 +29,7 @@ class VendaEditarState extends State<VendaEditarScreen> {
   final _parcelasController = TextEditingController();
   final _precoParceladoController = TextEditingController();
   final _codigoDescontoController = TextEditingController();
-  
+
   List<Map<String, dynamic>> produtos = [];
   List<Map<String, dynamic>> produtosSelecionados = [];
   String? clienteId;
@@ -54,7 +54,8 @@ class VendaEditarState extends State<VendaEditarScreen> {
 
   Future<void> _fetchVendas() async {
     final options = Options(headers: {'jwt-access': jwt});
-    final response = await Dio().get('http://localhost:3300/vendas/getVenda',
+    final response = await Dio().get(
+      'http://localhost:3300/vendas/getVenda',
       queryParameters: {
         'id': widget.id,
       },
@@ -64,8 +65,9 @@ class VendaEditarState extends State<VendaEditarScreen> {
     if (response.statusCode == 201) {
       final data = response.data;
       if (data['status'] == 'sucesso') {
-        final cliente = data['Cliente'];
-        final produtosVenda = data['ProdutoVenda'] as List;
+        final venda = data['venda'];
+        final cliente = venda['Cliente'];
+        final produtosVenda = venda['ProdutoVenda'] as List;
 
         setState(() {
           clienteId = cliente['id'].toString();
@@ -73,7 +75,8 @@ class VendaEditarState extends State<VendaEditarScreen> {
           _nameClienteController.text = cliente['nome'];
           _emailClienteController.text = cliente['email'];
 
-          produtosSelecionados = produtosVenda.map<Map<String, dynamic>>((produtoVenda) {
+          produtosSelecionados =
+              produtosVenda.map<Map<String, dynamic>>((produtoVenda) {
             final produto = produtoVenda['Produto'];
             return {
               'id': produtoVenda['idProduto'],
@@ -86,7 +89,8 @@ class VendaEditarState extends State<VendaEditarScreen> {
 
           _parcelasController.text = data['parcelas'].toString();
           _codigoDescontoController.text = data['codigoDesconto'];
-          _precoParceladoController.text = _calcularPrecoParcelado().toStringAsFixed(2);
+          _precoParceladoController.text =
+              _calcularPrecoParcelado().toStringAsFixed(2);
         });
       }
     } else {
@@ -108,7 +112,8 @@ class VendaEditarState extends State<VendaEditarScreen> {
       if (response.statusCode == 201) {
         if (response.data.containsKey('Produtos')) {
           setState(() {
-            produtos = List<Map<String, dynamic>>.from(response.data['Produtos']);
+            produtos =
+                List<Map<String, dynamic>>.from(response.data['Produtos']);
           });
         }
       } else {
@@ -143,7 +148,7 @@ class VendaEditarState extends State<VendaEditarScreen> {
         'http://localhost:3300/users/getUser/?cpf=$cpf',
         options: options,
       );
-      
+
       if (response.statusCode == 201) {
         final data = response.data;
         if (data['status'] == 'sucesso') {
@@ -245,8 +250,10 @@ class VendaEditarState extends State<VendaEditarScreen> {
     final precoParcelado = double.tryParse(_precoParceladoController.text) ?? 0;
     final parcelas = int.tryParse(_parcelasController.text) ?? 1;
 
-    final idUsuarioInt = idUsuario is int ? idUsuario : int.tryParse(idUsuario.toString()) ?? 0;
-    final clienteIdInt = clienteId is int ? clienteId : int.tryParse(clienteId.toString()) ?? 0;
+    final idUsuarioInt =
+        idUsuario is int ? idUsuario : int.tryParse(idUsuario.toString()) ?? 0;
+    final clienteIdInt =
+        clienteId is int ? clienteId : int.tryParse(clienteId.toString()) ?? 0;
 
     final vendaData = {
       'id': widget.id,
@@ -315,6 +322,7 @@ class VendaEditarState extends State<VendaEditarScreen> {
       body: Center(
         child: Container(
           width: 1200,
+          height: 5000,
           padding: const EdgeInsets.all(16.0),
           child: Form(
             key: _formKey,
@@ -379,16 +387,17 @@ class VendaEditarState extends State<VendaEditarScreen> {
                       "${item['nome']} - R\$ ${item['preco']}",
                   onChanged: (value) {
                     if (value != null) {
-                      final existingProduct = produtosSelecionados
-                        .firstWhere((produto) => produto['id'] == value['id'], orElse: () => {});
-                      
+                      final existingProduct = produtosSelecionados.firstWhere(
+                          (produto) => produto['id'] == value['id'],
+                          orElse: () => {});
+
                       if (existingProduct.isEmpty) {
                         setState(() {
                           produtosSelecionados.add({
                             ...value,
                             'quantidade': 1,
-                            'quantidadeDisponivel': value['quantidade'], 
-                            'preco': value['preco'], 
+                            'quantidadeDisponivel': value['quantidade'],
+                            'preco': value['preco'],
                           });
                         });
                       } else {
@@ -404,8 +413,8 @@ class VendaEditarState extends State<VendaEditarScreen> {
                     }
                   },
                   dropdownDecoratorProps: const DropDownDecoratorProps(
-                    dropdownSearchDecoration: InputDecoration(
-                        labelText: 'Selecione o Produto'),
+                    dropdownSearchDecoration:
+                        InputDecoration(labelText: 'Selecione o Produto'),
                   ),
                   popupProps: const PopupProps.dialog(
                     showSearchBox: true,
@@ -420,16 +429,26 @@ class VendaEditarState extends State<VendaEditarScreen> {
                 const SizedBox(height: 16),
                 const Row(
                   children: [
-                    Expanded(child: Text('Produto', style: TextStyle(fontWeight: FontWeight.bold))),
-                    SizedBox(width: 80, child: Text('Qtd', style: TextStyle(fontWeight: FontWeight.bold))),
-                    SizedBox(width: 100, child: Text('Total', style: TextStyle(fontWeight: FontWeight.bold))),
+                    Expanded(
+                        child: Text('Produto',
+                            style: TextStyle(fontWeight: FontWeight.bold))),
+                    SizedBox(
+                        width: 80,
+                        child: Text('Qtd',
+                            style: TextStyle(fontWeight: FontWeight.bold))),
+                    SizedBox(
+                        width: 100,
+                        child: Text('Total',
+                            style: TextStyle(fontWeight: FontWeight.bold))),
                   ],
                 ),
                 const Divider(),
                 ...produtosSelecionados.map((produto) {
                   return Row(
                     children: [
-                      Expanded(child: Text('${produto['nome']} - R\$ ${produto['preco'].toStringAsFixed(2)}')),
+                      Expanded(
+                          child: Text(
+                              '${produto['nome']} - R\$ ${produto['preco'].toStringAsFixed(2)}')),
                       SizedBox(
                         width: 80,
                         child: TextFormField(
@@ -437,14 +456,17 @@ class VendaEditarState extends State<VendaEditarScreen> {
                           keyboardType: TextInputType.number,
                           onChanged: (value) {
                             final quantidade = int.tryParse(value) ?? 0;
-                            if (quantidade > 0 && quantidade <= produto['quantidadeDisponivel']) {
+                            if (quantidade > 0 &&
+                                quantidade <= produto['quantidadeDisponivel']) {
                               setState(() {
                                 produto['quantidade'] = quantidade;
                               });
-                              _precoParceladoController.text = _calcularPrecoParcelado().toStringAsFixed(2);
+                              _precoParceladoController.text =
+                                  _calcularPrecoParcelado().toStringAsFixed(2);
                             } else {
                               Fluttertoast.showToast(
-                                msg: "Quantidade máxima é de ${produto['quantidadeDisponivel']}!",
+                                msg:
+                                    "Quantidade máxima é de ${produto['quantidadeDisponivel']}!",
                                 toastLength: Toast.LENGTH_SHORT,
                                 gravity: ToastGravity.TOP,
                                 backgroundColor: Colors.red,
@@ -463,12 +485,14 @@ class VendaEditarState extends State<VendaEditarScreen> {
                         ),
                       ),
                       IconButton(
-                        icon: const Icon(Icons.remove_circle, color: Colors.red),
+                        icon:
+                            const Icon(Icons.remove_circle, color: Colors.red),
                         onPressed: () {
                           setState(() {
                             produtosSelecionados.remove(produto);
                           });
-                          _precoParceladoController.text = _calcularPrecoParcelado().toStringAsFixed(2);
+                          _precoParceladoController.text =
+                              _calcularPrecoParcelado().toStringAsFixed(2);
                         },
                       ),
                     ],
@@ -478,7 +502,8 @@ class VendaEditarState extends State<VendaEditarScreen> {
                 TextFormField(
                   controller: _parcelasController,
                   keyboardType: TextInputType.number,
-                  decoration: const InputDecoration(labelText: 'Número de Parcelas'),
+                  decoration:
+                      const InputDecoration(labelText: 'Número de Parcelas'),
                   inputFormatters: [
                     FilteringTextInputFormatter.digitsOnly,
                   ],
@@ -498,18 +523,21 @@ class VendaEditarState extends State<VendaEditarScreen> {
                     }
 
                     setState(() {
-                      _precoParceladoController.text = _calcularPrecoParcelado().toStringAsFixed(2);
+                      _precoParceladoController.text =
+                          _calcularPrecoParcelado().toStringAsFixed(2);
                     });
                   },
                 ),
                 TextFormField(
                   controller: _codigoDescontoController,
-                  decoration: const InputDecoration(labelText: 'Código de Desconto'),
+                  decoration:
+                      const InputDecoration(labelText: 'Código de Desconto'),
                   onChanged: (_) {
                     setState(() {
                       final precoTotal = _calcularPrecoTotal();
                       _aplicarDesconto(precoTotal);
-                      _precoParceladoController.text = _calcularPrecoParcelado().toStringAsFixed(2);
+                      _precoParceladoController.text =
+                          _calcularPrecoParcelado().toStringAsFixed(2);
                     });
                   },
                 ),
@@ -529,7 +557,6 @@ class VendaEditarState extends State<VendaEditarScreen> {
                   style: const TextStyle(fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 16),
-
                 ElevatedButton(
                   onPressed: _confirmarVenda,
                   child: const Text('Confirmar Venda'),
