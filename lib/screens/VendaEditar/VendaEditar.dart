@@ -62,7 +62,7 @@ class VendaEditarState extends State<VendaEditarScreen> {
       options: options,
     );
 
-    if (response.statusCode == 201) {
+    if (response.statusCode == 201 || response.statusCode == 200) {
       final data = response.data;
       if (data['status'] == 'sucesso') {
         final venda = data['venda'];
@@ -70,28 +70,36 @@ class VendaEditarState extends State<VendaEditarScreen> {
         final produtosVenda = venda['ProdutoVenda'] as List;
 
         setState(() {
-          clienteId = cliente['id'].toString();
-          _cpfClienteController.text = cliente['cpf'];
-          _nameClienteController.text = cliente['nome'];
-          _emailClienteController.text = cliente['email'];
+          clienteId = cliente['id']?.toString() ?? '';
+          _cpfClienteController.text = cliente['cpf'] ?? '';
+          _nameClienteController.text = cliente['nome'] ?? '';
+          _emailClienteController.text = cliente['email'] ?? '';
 
           produtosSelecionados =
               produtosVenda.map<Map<String, dynamic>>((produtoVenda) {
             final produto = produtoVenda['Produto'];
             return {
-              'id': produtoVenda['idProduto'],
-              'nome': produto['nome'],
-              'preco': produto['preco'],
-              'quantidade': produtoVenda['quantidade'],
-              'quantidadeDisponivel': produto['quantidade'],
+              'id': produtoVenda['idProduto'] ?? '',
+              'nome': produto['nome'] ?? '',
+              'preco': double.tryParse(produto['preco'].toString()) ?? 0.0,
+              'quantidade': produtoVenda['quantidade'] ?? 0,
+              'quantidadeDisponivel': produto['quantidade'] ?? 0,
             };
           }).toList();
 
-          _parcelasController.text = data['parcelas'].toString();
-          _codigoDescontoController.text = data['codigoDesconto'];
-          _precoParceladoController.text =
-              _calcularPrecoParcelado().toStringAsFixed(2);
+          _parcelasController.text = venda['parcelas']?.toString() ?? '0';
+          _codigoDescontoController.text = venda['codigoDesconto'] ?? '';
+          _precoParceladoController.text = _calcularPrecoParcelado().toStringAsFixed(2);
         });
+      } else {
+        Fluttertoast.showToast(
+          msg: "Erro: ${data['mensagem'] ?? 'Desconhecido'}",
+          toastLength: Toast.LENGTH_LONG,
+          gravity: ToastGravity.TOP,
+          backgroundColor: Colors.red,
+          textColor: Colors.white,
+          fontSize: 20.0,
+        );
       }
     } else {
       Fluttertoast.showToast(
@@ -290,7 +298,7 @@ class VendaEditarState extends State<VendaEditarScreen> {
           fontSize: 16.0,
         );
         // ignore: use_build_context_synchronously
-        Navigator.pop(context);
+        Navigator.pop(context, 'edited');
       } else {
         Fluttertoast.showToast(
           msg: "Erro ao confirmar venda: ${response.statusCode}",

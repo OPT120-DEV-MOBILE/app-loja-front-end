@@ -129,12 +129,15 @@ class _VendaScreenState extends State<VendaScreen> {
                         children: [
                           IconButton(
                             icon: const Icon(Icons.edit),
-                            onPressed: () {
-                              Navigator.pushNamed(
+                            onPressed: () async {
+                              final result = await Navigator.pushNamed(
                                 context,
                                 '/vendasEditar',
                                 arguments: venda.id,
                               );
+                              if (result == 'edited') {
+                                _refreshVendas();
+                              }
                             },
                           ),
                         ],
