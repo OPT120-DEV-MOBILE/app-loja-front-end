@@ -1,6 +1,7 @@
 // ignore_for_file: library_private_types_in_public_api
 
 import 'package:app_lojas/menu/menu.dart';
+import 'package:app_lojas/styles/styles_app.dart';
 import 'package:flutter/material.dart';
 import 'package:dio/dio.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -27,6 +28,7 @@ class _VendaScreenState extends State<VendaScreen> {
   void initState() {
     super.initState();
     _isMounted = true;
+    _vendaFuture = Future.value([]);
     _getStoredValues().then((_) {
       _refreshVendas();
     });
@@ -71,23 +73,23 @@ class _VendaScreenState extends State<VendaScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Vendas'),
+        title: Text('Vendas', style: AppStyles.largeTextStyle),
+        backgroundColor: AppStyles.primaryColor,
       ),
       drawer: const AppMenu(),
       body: Padding(
         padding: const EdgeInsets.all(20.0),
-        child: SingleChildScrollView(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
+        child: ListView(
+          children: [
               Row(
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: [
                   Expanded(
                     child: TextField(
                       controller: _searchController,
-                      decoration: const InputDecoration(
-                        labelText: 'Pesquisar por funcionário ou cliente',
+                      decoration: AppStyles.textFieldDecoration.copyWith(
+                        hintText: 'Pesquisar por funcionário ou cliente',
+                        hintStyle: AppStyles.formTextStyle,
                       ),
                     ),
                   ),
@@ -95,13 +97,14 @@ class _VendaScreenState extends State<VendaScreen> {
                   SizedBox(
                     width: 200,
                     child: ElevatedButton(
+                      style: AppStyles.elevatedButtonStyle,
                       onPressed: () async {
                         final result = await Navigator.pushNamed(context, '/vendasCriar');
                         if (result == 'created') {
                           _refreshVendas();
                         }
                       },
-                      child: const Text('Criar Venda', style: TextStyle(fontSize: 12)),
+                      child: Text('Criar Venda', style: AppStyles.smallTextStyle,),
                     ),
                   ),
                 ],
@@ -109,7 +112,6 @@ class _VendaScreenState extends State<VendaScreen> {
               const SizedBox(height: 20),
               _buildList(context),
             ],
-          ),
         ),
       ),
     );
@@ -133,22 +135,32 @@ class _VendaScreenState extends State<VendaScreen> {
             itemCount: vendas.length,
             itemBuilder: (context, index) {
               final venda = vendas[index];
+              double valorComDesconto = venda.precoTotal;
+              if (venda.codigoDesconto != null && venda.codigoDesconto!.isNotEmpty) {
+                valorComDesconto = aplicarDesconto(venda.precoTotal, venda.codigoDesconto!);
+              }
+
               return Card(
-                margin: const EdgeInsets.symmetric(vertical: 10),
+                shape: AppStyles.cardTheme.shape,
+                margin: AppStyles.cardTheme.margin,
+                elevation: AppStyles.cardTheme.elevation,
+                color: AppStyles.cardTheme.color,
                 child: Padding(
                   padding: const EdgeInsets.all(15.0),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text('Código da Venda: ${venda.id}',
-                        style: Theme.of(context).textTheme.titleLarge),
+                          style: AppStyles.listItemTitleStyle),
                       const SizedBox(height: 10),
-                      Text('Funcionário: ${venda.funcionario?.nome ?? "Não disponível"}'),
-                      Text('Cliente: ${venda.cliente?.nome ?? "Não disponível"}'),
-                      Text('Preço Total: R\$ ${venda.precoTotal.toStringAsFixed(2)}'),
-                      Text('Parcelas: ${venda.parcelas ?? 'Não disponível'}'),
-                      Text('Preço Parcelado: R\$ ${venda.precoParcelado ?? 'Não disponível'}'),
-                      Text('Código de Desconto: ${venda.codigoDesconto ?? 'Não disponível'}'),
+                      Text('Funcionário: ${venda.funcionario?.nome ?? "Não disponível"}', style: AppStyles.listItemSubtitleStyle),
+                      Text('Cliente: ${venda.cliente?.nome ?? "Não disponível"}', style: AppStyles.listItemSubtitleStyle),
+                      Text('Preço Total: R\$ ${venda.precoTotal.toStringAsFixed(2)}', style: AppStyles.listItemSubtitleStyle),
+                      if (venda.codigoDesconto != null) // Exibe o valor com desconto se houver
+                        Text('Preço com Desconto: R\$ ${valorComDesconto.toStringAsFixed(2)}', style: AppStyles.listItemSubtitleStyle),
+                      Text('Parcelas: ${venda.parcelas ?? 'Não disponível'}', style: AppStyles.listItemSubtitleStyle),
+                      Text('Preço Parcelado: R\$ ${venda.precoParcelado ?? 'Não disponível'}', style: AppStyles.listItemSubtitleStyle),
+                      Text('Código de Desconto: ${venda.codigoDesconto ?? 'Não disponível'}', style: AppStyles.listItemSubtitleStyle),
                       const SizedBox(height: 10),
                       ButtonBar(
                         alignment: MainAxisAlignment.end,
@@ -165,6 +177,7 @@ class _VendaScreenState extends State<VendaScreen> {
                                 _refreshVendas();
                               }
                             },
+                            color: AppStyles.primaryColor, 
                           ),
                         ],
                       ),
@@ -177,6 +190,11 @@ class _VendaScreenState extends State<VendaScreen> {
         }
       },
     );
+  }
+
+  double aplicarDesconto(double precoTotal, String codigoDesconto) {
+  double desconto = 0.10;
+  return precoTotal * (1 - desconto);
   }
 
   Future<List<Venda>> _fetchVendas({String? query}) async {

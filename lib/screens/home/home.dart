@@ -38,7 +38,7 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Take Charge'),
+        title: const Text('Dashboard'),
       ),
       drawer: const AppMenu(),
       body: Center(
@@ -52,7 +52,6 @@ class _HomeScreenState extends State<HomeScreen> {
                     width: 200,
                     height: 150,
                   ),
-                  const SizedBox(height: 10),
                   Text(
                     'Bem-vindo ao nosso aplicativo!',
                     style: Theme.of(context).textTheme.headlineSmall,

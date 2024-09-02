@@ -1,5 +1,6 @@
 // ignore_for_file: file_names
 
+import 'package:app_lojas/styles/styles_app.dart';
 import 'package:flutter/material.dart';
 import 'package:dio/dio.dart';
 import 'package:dropdown_search/dropdown_search.dart';
@@ -298,7 +299,7 @@ class VendaEditarState extends State<VendaEditarScreen> {
           fontSize: 16.0,
         );
         // ignore: use_build_context_synchronously
-        Navigator.pop(context, 'edited');
+        Navigator.pushReplacementNamed(context, '/vendas');
       } else {
         Fluttertoast.showToast(
           msg: "Erro ao confirmar venda: ${response.statusCode}",
@@ -325,251 +326,279 @@ class VendaEditarState extends State<VendaEditarScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Editar Venda'),
+        title: Text('Editar Venda', style: AppStyles.largeTextStyle),
+          backgroundColor: AppStyles.primaryColor,
       ),
       body: Center(
         child: Container(
           width: 1200,
           height: 5000,
           padding: const EdgeInsets.all(16.0),
-          child: Form(
-            key: _formKey,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: TextFormField(
-                        controller: _cpfClienteController,
-                        decoration: const InputDecoration(labelText: 'CPF'),
-                        validator: (value) {
-                          if (value == null || value.isEmpty) {
-                            return 'Por favor, insira o CPF';
-                          }
-                          return null;
-                        },
+          child: SingleChildScrollView(
+            child: Form(
+              key: _formKey,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: TextFormField(
+                          controller: _cpfClienteController,
+                          decoration: AppStyles.textFieldDecoration.copyWith(
+                            hintText: 'Pesquisar por CPF',
+                            hintStyle: AppStyles.formTextStyle,
+                          ),
+                          validator: (value) {
+                            if (value == null || value.isEmpty) {
+                              return 'Por favor, insira o CPF';
+                            }
+                            return null;
+                          },
+                        ),
                       ),
-                    ),
-                    const SizedBox(width: 8),
-                    ElevatedButton(
-                      onPressed: _fetchClienteData,
-                      child: const Text('Buscar'),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 16),
-                Row(
-                  children: [
-                    Expanded(
-                      child: TextFormField(
-                        controller: _nameClienteController,
-                        decoration: const InputDecoration(labelText: 'Nome'),
-                        validator: (value) {
-                          if (value == null || value.isEmpty) {
-                            return 'Por favor, insira o nome';
-                          }
-                          return null;
-                        },
+                      const SizedBox(width: 8),
+                      ElevatedButton(
+                        style: AppStyles.elevatedButtonStyle,
+                        onPressed: _fetchClienteData,
+                        child: const Text('Buscar'),
                       ),
-                    ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: TextFormField(
-                        controller: _emailClienteController,
-                        decoration: const InputDecoration(labelText: 'Email'),
-                        validator: (value) {
-                          if (value == null || value.isEmpty) {
-                            return 'Por favor, insira o email';
-                          }
-                          return null;
-                        },
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: TextFormField(
+                          controller: _nameClienteController,
+                          decoration: AppStyles.textFieldDecoration.copyWith(
+                            hintText: 'Nome',
+                            hintStyle: AppStyles.formTextStyle,
+                          ),
+                          validator: (value) {
+                            if (value == null || value.isEmpty) {
+                              return 'Por favor, insira o nome';
+                            }
+                            return null;
+                          },
+                        ),
                       ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 16),
-                DropdownSearch<Map<String, dynamic>>(
-                  items: produtos,
-                  itemAsString: (item) =>
-                      "${item['nome']} - R\$ ${item['preco']}",
-                  onChanged: (value) {
-                    if (value != null) {
-                      final existingProduct = produtosSelecionados.firstWhere(
-                          (produto) => produto['id'] == value['id'],
-                          orElse: () => {});
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: TextFormField(
+                          controller: _emailClienteController,
+                          decoration: AppStyles.textFieldDecoration.copyWith(
+                            hintText: 'Email',
+                            hintStyle: AppStyles.formTextStyle,
+                          ),
+                          validator: (value) {
+                            if (value == null || value.isEmpty) {
+                              return 'Por favor, insira o email';
+                            }
+                            return null;
+                          },
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  DropdownSearch<Map<String, dynamic>>(
+                    items: produtos,
+                    itemAsString: (item) =>
+                        "${item['nome']} - R\$ ${item['preco']}",
+                    onChanged: (value) {
+                      if (value != null) {
+                        final existingProduct = produtosSelecionados.firstWhere(
+                            (produto) => produto['id'] == value['id'],
+                            orElse: () => {});
 
-                      if (existingProduct.isEmpty) {
-                        setState(() {
-                          produtosSelecionados.add({
-                            ...value,
-                            'quantidade': 1,
-                            'quantidadeDisponivel': value['quantidade'],
-                            'preco': value['preco'],
+                        if (existingProduct.isEmpty) {
+                          setState(() {
+                            produtosSelecionados.add({
+                              ...value,
+                              'quantidade': 1,
+                              'quantidadeDisponivel': value['quantidade'],
+                              'preco': value['preco'],
+                            });
                           });
-                        });
-                      } else {
+                        } else {
+                          Fluttertoast.showToast(
+                            msg: "Produto já selecionado!",
+                            toastLength: Toast.LENGTH_SHORT,
+                            gravity: ToastGravity.TOP,
+                            backgroundColor: Colors.red,
+                            textColor: Colors.white,
+                            fontSize: 16.0,
+                          );
+                        }
+                      }
+                    },
+                    dropdownDecoratorProps: DropDownDecoratorProps(
+                      dropdownSearchDecoration: AppStyles.textFieldDecoration.copyWith(
+                        labelText: 'Selecione o Produto',
+                        labelStyle: AppStyles.formTextStyle,
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      ),
+                    ),
+                    popupProps: PopupProps.dialog(
+                      showSearchBox: true,
+                      searchFieldProps: TextFieldProps(
+                        decoration: AppStyles.textFieldDecoration.copyWith(
+                          hintText: 'Pesquise por nome',
+                          hintStyle: AppStyles.formTextStyle,
+                        ),
+                      ),
+                    ),
+                    validator: (value) {
+                      if (produtosSelecionados.isEmpty) {
+                        return 'Por favor, selecione ao menos um produto';
+                      }
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 16),
+                  const Row(
+                    children: [
+                      Expanded(
+                          child: Text('Produto',
+                              style: TextStyle(fontWeight: FontWeight.bold))),
+                      SizedBox(
+                          width: 80,
+                          child: Text('Qtd',
+                              style: TextStyle(fontWeight: FontWeight.bold))),
+                      SizedBox(
+                          width: 100,
+                          child: Text('Total',
+                              style: TextStyle(fontWeight: FontWeight.bold))),
+                    ],
+                  ),
+                  const Divider(),
+                  ...produtosSelecionados.map((produto) {
+                    return Row(
+                      children: [
+                        Expanded(
+                            child: Text(
+                                '${produto['nome']} - R\$ ${produto['preco'].toStringAsFixed(2)}')),
+                        SizedBox(
+                          width: 80,
+                          child: TextFormField(
+                            initialValue: produto['quantidade'].toString(),
+                            keyboardType: TextInputType.number,
+                            onChanged: (value) {
+                              final quantidade = int.tryParse(value) ?? 0;
+                              if (quantidade > 0 &&
+                                  quantidade <= produto['quantidadeDisponivel']) {
+                                setState(() {
+                                  produto['quantidade'] = quantidade;
+                                });
+                                _precoParceladoController.text =
+                                    _calcularPrecoParcelado().toStringAsFixed(2);
+                              } else {
+                                Fluttertoast.showToast(
+                                  msg:
+                                      "Quantidade máxima é de ${produto['quantidadeDisponivel']}!",
+                                  toastLength: Toast.LENGTH_SHORT,
+                                  gravity: ToastGravity.TOP,
+                                  backgroundColor: Colors.red,
+                                  textColor: Colors.white,
+                                  fontSize: 16.0,
+                                );
+                              }
+                            },
+                          ),
+                        ),
+                        SizedBox(
+                          width: 100,
+                          child: Text(
+                            'R\$ ${(produto['quantidade'] * produto['preco']).toStringAsFixed(2)}',
+                            style: const TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                        ),
+                        IconButton(
+                          icon:
+                              const Icon(Icons.remove_circle, color: Colors.red),
+                          onPressed: () {
+                            setState(() {
+                              produtosSelecionados.remove(produto);
+                            });
+                            _precoParceladoController.text =
+                                _calcularPrecoParcelado().toStringAsFixed(2);
+                          },
+                        ),
+                      ],
+                    );
+                  }),
+                  const SizedBox(height: 16),
+                  TextFormField(
+                    controller: _parcelasController,
+                    keyboardType: TextInputType.number,
+                    decoration: AppStyles.textFieldDecoration.copyWith(
+                      hintText: 'Número de Parcelas',
+                      hintStyle: AppStyles.formTextStyle,
+                    ),
+                    inputFormatters: [
+                      FilteringTextInputFormatter.digitsOnly,
+                    ],
+                    onChanged: (value) {
+                      final int parcelas = int.tryParse(value) ?? 0;
+
+                      if (parcelas > 10) {
                         Fluttertoast.showToast(
-                          msg: "Produto já selecionado!",
+                          msg: "Número de parcelas não pode ser maior que 10",
                           toastLength: Toast.LENGTH_SHORT,
                           gravity: ToastGravity.TOP,
                           backgroundColor: Colors.red,
                           textColor: Colors.white,
                           fontSize: 16.0,
                         );
+                        _parcelasController.text = '10';
                       }
-                    }
-                  },
-                  dropdownDecoratorProps: const DropDownDecoratorProps(
-                    dropdownSearchDecoration:
-                        InputDecoration(labelText: 'Selecione o Produto'),
-                  ),
-                  popupProps: const PopupProps.dialog(
-                    showSearchBox: true,
-                  ),
-                  validator: (value) {
-                    if (produtosSelecionados.isEmpty) {
-                      return 'Por favor, selecione ao menos um produto';
-                    }
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 16),
-                const Row(
-                  children: [
-                    Expanded(
-                        child: Text('Produto',
-                            style: TextStyle(fontWeight: FontWeight.bold))),
-                    SizedBox(
-                        width: 80,
-                        child: Text('Qtd',
-                            style: TextStyle(fontWeight: FontWeight.bold))),
-                    SizedBox(
-                        width: 100,
-                        child: Text('Total',
-                            style: TextStyle(fontWeight: FontWeight.bold))),
-                  ],
-                ),
-                const Divider(),
-                ...produtosSelecionados.map((produto) {
-                  return Row(
-                    children: [
-                      Expanded(
-                          child: Text(
-                              '${produto['nome']} - R\$ ${produto['preco'].toStringAsFixed(2)}')),
-                      SizedBox(
-                        width: 80,
-                        child: TextFormField(
-                          initialValue: produto['quantidade'].toString(),
-                          keyboardType: TextInputType.number,
-                          onChanged: (value) {
-                            final quantidade = int.tryParse(value) ?? 0;
-                            if (quantidade > 0 &&
-                                quantidade <= produto['quantidadeDisponivel']) {
-                              setState(() {
-                                produto['quantidade'] = quantidade;
-                              });
-                              _precoParceladoController.text =
-                                  _calcularPrecoParcelado().toStringAsFixed(2);
-                            } else {
-                              Fluttertoast.showToast(
-                                msg:
-                                    "Quantidade máxima é de ${produto['quantidadeDisponivel']}!",
-                                toastLength: Toast.LENGTH_SHORT,
-                                gravity: ToastGravity.TOP,
-                                backgroundColor: Colors.red,
-                                textColor: Colors.white,
-                                fontSize: 16.0,
-                              );
-                            }
-                          },
-                        ),
-                      ),
-                      SizedBox(
-                        width: 100,
-                        child: Text(
-                          'R\$ ${(produto['quantidade'] * produto['preco']).toStringAsFixed(2)}',
-                          style: const TextStyle(fontWeight: FontWeight.bold),
-                        ),
-                      ),
-                      IconButton(
-                        icon:
-                            const Icon(Icons.remove_circle, color: Colors.red),
-                        onPressed: () {
-                          setState(() {
-                            produtosSelecionados.remove(produto);
-                          });
-                          _precoParceladoController.text =
-                              _calcularPrecoParcelado().toStringAsFixed(2);
-                        },
-                      ),
-                    ],
-                  );
-                }),
-                const SizedBox(height: 16),
-                TextFormField(
-                  controller: _parcelasController,
-                  keyboardType: TextInputType.number,
-                  decoration:
-                      const InputDecoration(labelText: 'Número de Parcelas'),
-                  inputFormatters: [
-                    FilteringTextInputFormatter.digitsOnly,
-                  ],
-                  onChanged: (value) {
-                    final int parcelas = int.tryParse(value) ?? 0;
 
-                    if (parcelas > 10) {
-                      Fluttertoast.showToast(
-                        msg: "Número de parcelas não pode ser maior que 10",
-                        toastLength: Toast.LENGTH_SHORT,
-                        gravity: ToastGravity.TOP,
-                        backgroundColor: Colors.red,
-                        textColor: Colors.white,
-                        fontSize: 16.0,
-                      );
-                      _parcelasController.text = '10';
-                    }
-
-                    setState(() {
-                      _precoParceladoController.text =
-                          _calcularPrecoParcelado().toStringAsFixed(2);
-                    });
-                  },
-                ),
-                TextFormField(
-                  controller: _codigoDescontoController,
-                  decoration:
-                      const InputDecoration(labelText: 'Código de Desconto'),
-                  onChanged: (_) {
-                    setState(() {
-                      final precoTotal = _calcularPrecoTotal();
-                      _aplicarDesconto(precoTotal);
-                      _precoParceladoController.text =
-                          _calcularPrecoParcelado().toStringAsFixed(2);
-                    });
-                  },
-                ),
-                const SizedBox(height: 16),
-                Text(
-                  'Quantidade de Parcelas: ${_parcelasController.text}',
-                  style: const TextStyle(fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  'Valor por Parcelas: R\$ ${_calcularPrecoParcelado().toStringAsFixed(2)}',
-                  style: const TextStyle(fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  'Preço Total: R\$ ${_aplicarDesconto(_calcularPrecoTotal()).toStringAsFixed(2)}',
-                  style: const TextStyle(fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: 16),
-                ElevatedButton(
-                  onPressed: _confirmarVenda,
-                  child: const Text('Confirmar Venda'),
-                ),
-              ],
+                      setState(() {
+                        _precoParceladoController.text =
+                            _calcularPrecoParcelado().toStringAsFixed(2);
+                      });
+                    },
+                  ),
+                  const SizedBox(height: 16),
+                  TextFormField(
+                    controller: _codigoDescontoController,
+                    decoration: AppStyles.textFieldDecoration.copyWith(
+                      hintText: 'Código de Desconto',
+                      hintStyle: AppStyles.formTextStyle,
+                    ),
+                    onChanged: (_) {
+                      setState(() {
+                        final precoTotal = _calcularPrecoTotal();
+                        _aplicarDesconto(precoTotal);
+                        _precoParceladoController.text =
+                            _calcularPrecoParcelado().toStringAsFixed(2);
+                      });
+                    },
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    'Quantidade de Parcelas: ${_parcelasController.text}',
+                    style: const TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Valor por Parcelas: R\$ ${_calcularPrecoParcelado().toStringAsFixed(2)}',
+                    style: const TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Preço Total: R\$ ${_aplicarDesconto(_calcularPrecoTotal()).toStringAsFixed(2)}',
+                    style: const TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 16),
+                  ElevatedButton(
+                    onPressed: _confirmarVenda,
+                    style: AppStyles.elevatedButtonStyle,
+                    child: const Text('Confirmar Venda'),
+                  ),
+                ],
+              ),
             ),
           ),
         ),

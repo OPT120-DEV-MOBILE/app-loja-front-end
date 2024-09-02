@@ -29,6 +29,7 @@ class _UserScreenState extends State<UserScreen> {
   void initState() {
     super.initState();
     _isMounted = true;
+    _userFuture = Future.value([]);
     _getStoredValues().then((_) {
       setState(() {
         _userFuture = _fetchUsers();
@@ -420,7 +421,7 @@ class _UserFormState extends State<UserForm> {
               decoration: AppStyles.textFieldDecoration.copyWith(
               hintText: 'Senha',
               hintStyle: AppStyles.formTextStyle,
-            ),
+              ),
               obscureText: true,
               validator: (value) {
                 if (value == null || value.isEmpty) {

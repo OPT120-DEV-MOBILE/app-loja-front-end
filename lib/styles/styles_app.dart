@@ -13,7 +13,7 @@ class AppStyles {
   static const Color switchTrackColor = Colors.grey;
 
   // Fontes
-  static const String fontFamily = 'Roboto'; // Nome da fonte
+  static const String fontFamily = 'Roboto';
 
   // Tamanhos
   static const double smallFontSize = 12.0;

@@ -1,11 +1,12 @@
 // ignore_for_file: library_private_types_in_public_api
 
 import 'package:app_lojas/menu/menu.dart';
+import 'package:app_lojas/styles/styles_app.dart';
 import 'package:flutter/material.dart';
 import 'package:dio/dio.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_masked_text2/flutter_masked_text2.dart';
-import 'dart:async';  // Import necessário para o Timer
+import 'dart:async';
 
 class EmpresaScreen extends StatefulWidget {
   const EmpresaScreen({super.key});
@@ -22,19 +23,19 @@ class _EmpresaScreenState extends State<EmpresaScreen> {
   String? role;
   String? idUsuario;
   final TextEditingController _searchController = TextEditingController(); // Controlador para o campo de pesquisa
-  Timer? _debounce;  // Timer para o debounce
+  Timer? _debounce;
 
   @override
   void initState() {
     super.initState();
     _isMounted = true;
+    _empresaFuture = Future.value([]);
     _getStoredValues().then((_) {
       setState(() {
         _empresaFuture = _fetchEmpresas();
       });
     });
 
-    // Adicionando listener ao TextEditingController para o campo de pesquisa
     _searchController.addListener(_onSearchChanged);
   }
 
@@ -42,7 +43,7 @@ class _EmpresaScreenState extends State<EmpresaScreen> {
   void dispose() {
     _isMounted = false;
     _searchController.dispose();
-    _debounce?.cancel();  // Cancela o timer se a tela for desmontada
+    _debounce?.cancel();
     super.dispose();
   }
 
@@ -68,7 +69,8 @@ class _EmpresaScreenState extends State<EmpresaScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Empresas'),
+        title: Text('Empresas', style: AppStyles.largeTextStyle),
+        backgroundColor: AppStyles.primaryColor,
       ),
       drawer: const AppMenu(),
       body: Padding(
@@ -81,9 +83,10 @@ class _EmpresaScreenState extends State<EmpresaScreen> {
                 children: [
                   Expanded(
                     child: TextField(
-                      controller: _searchController,  // Campo de pesquisa
-                      decoration: const InputDecoration(
-                        labelText: 'Pesquisar por empresa',
+                      controller: _searchController,
+                      decoration: AppStyles.textFieldDecoration.copyWith(
+                        hintText: 'Pesquisar por empresa',
+                        hintStyle: AppStyles.formTextStyle,
                       ),
                     ),
                   ),
@@ -91,10 +94,11 @@ class _EmpresaScreenState extends State<EmpresaScreen> {
                   SizedBox(
                     width: 200,
                     child: ElevatedButton(
+                      style: AppStyles.elevatedButtonStyle,
                       onPressed: () {
                         _openCreateEmpresaForm(context);
                       },
-                      child: const Text('Criar Empresa', style: TextStyle(fontSize: 12)),
+                      child: Text('Criar Empresa', style: AppStyles.smallTextStyle,),
                     ),
                   ),
                 ],
@@ -127,25 +131,29 @@ class _EmpresaScreenState extends State<EmpresaScreen> {
             itemBuilder: (context, index) {
               final empresa = empresas[index];
               return Card(
-                margin: const EdgeInsets.symmetric(vertical: 10),
+                shape: AppStyles.cardTheme.shape,
+                margin: AppStyles.cardTheme.margin,
+                elevation: AppStyles.cardTheme.elevation,
+                color: AppStyles.cardTheme.color,
                 child: Padding(
                   padding: const EdgeInsets.all(15.0),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('Nome: ${empresa.nome}', style: Theme.of(context).textTheme.titleLarge),
-                      Text('Tipo do Documento: ${empresa.tipoDocumento}'),
-                      Text('Nº Documento: ${empresa.numeroDocumento}'),
-                      Text('CEP: ${empresa.cep}'),
-                      Text('Endereço: ${empresa.endereco}'),
-                      Text('Cidade: ${empresa.cidade}'),
-                      Text('Estado: ${empresa.estado}'),
+                      Text('Nome: ${empresa.nome}', style: AppStyles.listItemTitleStyle),
+                      Text('Tipo do Documento: ${empresa.tipoDocumento}', style: AppStyles.listItemSubtitleStyle),
+                      Text('Nº Documento: ${empresa.numeroDocumento}', style: AppStyles.listItemSubtitleStyle),
+                      Text('CEP: ${empresa.cep}', style: AppStyles.listItemSubtitleStyle),
+                      Text('Endereço: ${empresa.endereco}', style: AppStyles.listItemSubtitleStyle),
+                      Text('Cidade: ${empresa.cidade}', style: AppStyles.listItemSubtitleStyle),
+                      Text('Estado: ${empresa.estado}', style: AppStyles.listItemSubtitleStyle),
                       ButtonBar(
                         alignment: MainAxisAlignment.end,
                         children: [
                           IconButton(
                             icon: const Icon(Icons.edit),
                             onPressed: () => _openEditEmpresaForm(context, empresa),
+                            color: AppStyles.primaryColor, 
                           ),
                           // IconButton(
                           //   icon: const Icon(Icons.delete),
@@ -195,7 +203,7 @@ class _EmpresaScreenState extends State<EmpresaScreen> {
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: const Text('Criar Empresa'),
+          title: Text('Criar Empresa', style: AppStyles.formTitleStyle),
           content: IntrinsicHeight(
             child: SingleChildScrollView(
               child: SizedBox(
@@ -222,7 +230,7 @@ class _EmpresaScreenState extends State<EmpresaScreen> {
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: const Text('Editar Empresa'),
+          title: Text('Editar Empresa', style: AppStyles.formTitleStyle),
           content: IntrinsicHeight(
             child: SingleChildScrollView(
               child: SizedBox(
@@ -313,7 +321,10 @@ class _EmpresaFormState extends State<EmpresaForm> {
         children: [
           TextFormField(
             controller: _nameController,
-            decoration: const InputDecoration(labelText: 'Nome'),
+            decoration: AppStyles.textFieldDecoration.copyWith(
+              hintText: 'Nome',
+              hintStyle: AppStyles.formTextStyle,
+            ),
             validator: (value) {
               if (value == null || value.isEmpty) {
                 return 'Por favor, insira o nome';
@@ -321,12 +332,14 @@ class _EmpresaFormState extends State<EmpresaForm> {
               return null;
             },
           ),
+          const SizedBox(height: 10),
           DropdownButtonFormField<String>(
             value: _tipoDocumentoController.text,
-            decoration: const InputDecoration(labelText: 'Tipo do Documento'),
-            items: const [
-              DropdownMenuItem(value: 'CNPJ', child: Text('CNPJ')),
-              DropdownMenuItem(value: 'CPF', child: Text('CPF')),
+            hint: Text('Tipo do Documento', style: AppStyles.dropdownStyle.hintStyle),
+            decoration: AppStyles.textFieldDecoration,
+            items: [
+              DropdownMenuItem(value: 'CNPJ', child: Text('CNPJ', style: AppStyles.dropdownStyle.itemStyle)),
+              DropdownMenuItem(value: 'CPF', child: Text('CPF', style: AppStyles.dropdownStyle.itemStyle)),
             ],
             onChanged: (value) {
               if (value != null) {
@@ -340,9 +353,13 @@ class _EmpresaFormState extends State<EmpresaForm> {
               return null;
             },
           ),
+          const SizedBox(height: 10),
           TextFormField(
             controller: _numeroDocumentoController,
-            decoration: const InputDecoration(labelText: 'Nº do documento'),
+            decoration: AppStyles.textFieldDecoration.copyWith(
+              hintText: 'Nº do documento',
+              hintStyle: AppStyles.formTextStyle,
+            ),
             validator: (value) {
               if (value == null || value.isEmpty) {
                 return 'Por favor, insira o número do documento';
@@ -350,9 +367,13 @@ class _EmpresaFormState extends State<EmpresaForm> {
               return null;
             },
           ),
+          const SizedBox(height: 10),
           TextFormField(
             controller: _cepController,
-            decoration: const InputDecoration(labelText: 'CEP'),
+            decoration: AppStyles.textFieldDecoration.copyWith(
+              hintText: 'CEP',
+              hintStyle: AppStyles.formTextStyle,
+            ),
             validator: (value) {
               if (value == null || value.isEmpty) {
                 return 'Por favor, insira o CEP da empresa';
@@ -360,9 +381,13 @@ class _EmpresaFormState extends State<EmpresaForm> {
               return null;
             },
           ),
+          const SizedBox(height: 10),
           TextFormField(
             controller: _enderecoController,
-            decoration: const InputDecoration(labelText: 'Endereço'),
+            decoration: AppStyles.textFieldDecoration.copyWith(
+              hintText: 'Endereço',
+              hintStyle: AppStyles.formTextStyle,
+            ),
             validator: (value) {
               if (value == null || value.isEmpty) {
                 return 'Por favor, insira o endereço da empresa';
@@ -370,9 +395,13 @@ class _EmpresaFormState extends State<EmpresaForm> {
               return null;
             },
           ),
+          const SizedBox(height: 10),
           TextFormField(
             controller: _cidadeController,
-            decoration: const InputDecoration(labelText: 'Cidade'),
+            decoration: AppStyles.textFieldDecoration.copyWith(
+              hintText: 'Cidade',
+              hintStyle: AppStyles.formTextStyle,
+            ),
             validator: (value) {
               if (value == null || value.isEmpty) {
                 return 'Por favor, insira a cidade da empresa';
@@ -380,9 +409,13 @@ class _EmpresaFormState extends State<EmpresaForm> {
               return null;
             },
           ),
+          const SizedBox(height: 10),
           TextFormField(
             controller: _estadoController,
-            decoration: const InputDecoration(labelText: 'Estado'),
+            decoration: AppStyles.textFieldDecoration.copyWith(
+              hintText: 'Estado',
+              hintStyle: AppStyles.formTextStyle,
+            ),
             validator: (value) {
               if (value == null || value.isEmpty) {
                 return 'Por favor, insira o estado da empresa';
@@ -397,6 +430,7 @@ class _EmpresaFormState extends State<EmpresaForm> {
                 _submitForm();
               }
             },
+            style: AppStyles.elevatedButtonStyle,
             child: const Text('Criar Empresa'),
           ),
         ],
@@ -536,7 +570,10 @@ class _EditEmpresaFormState extends State<EditEmpresaForm> {
         children: [
           TextFormField(
             controller: _nameController,
-            decoration: const InputDecoration(labelText: 'Nome'),
+            decoration: AppStyles.textFieldDecoration.copyWith(
+              hintText: 'Nome',
+              hintStyle: AppStyles.formTextStyle,
+            ),
             validator: (value) {
               if (value == null || value.isEmpty) {
                 return 'Por favor, insira o nome';
@@ -544,12 +581,13 @@ class _EditEmpresaFormState extends State<EditEmpresaForm> {
               return null;
             },
           ),
+          const SizedBox(height: 10),
           DropdownButtonFormField<String>(
             value: _tipoDocumentoController.text,
-            decoration: const InputDecoration(labelText: 'Tipo do Documento'),
-            items: const [
-              DropdownMenuItem(value: 'CNPJ', child: Text('CNPJ')),
-              DropdownMenuItem(value: 'CPF', child: Text('CPF')),
+            decoration: AppStyles.textFieldDecoration,
+            items: [
+              DropdownMenuItem(value: 'CNPJ', child: Text('CNPJ', style: AppStyles.dropdownStyle.itemStyle)),
+              DropdownMenuItem(value: 'CPF', child: Text('CPF', style: AppStyles.dropdownStyle.itemStyle)),
             ],
             onChanged: (value) {
               if (value != null) {
@@ -563,9 +601,13 @@ class _EditEmpresaFormState extends State<EditEmpresaForm> {
               return null;
             },
           ),
+          const SizedBox(height: 10),
           TextFormField(
             controller: _numeroDocumentoController,
-            decoration: const InputDecoration(labelText: 'Nº do documento'),
+            decoration: AppStyles.textFieldDecoration.copyWith(
+              hintText: 'Nº do documento',
+              hintStyle: AppStyles.formTextStyle,
+            ),
             validator: (value) {
               if (value == null || value.isEmpty) {
                 return 'Por favor, insira o número do documento';
@@ -573,9 +615,13 @@ class _EditEmpresaFormState extends State<EditEmpresaForm> {
               return null;
             },
           ),
+          const SizedBox(height: 10),
           TextFormField(
             controller: _cepController,
-            decoration: const InputDecoration(labelText: 'CEP'),
+            decoration: AppStyles.textFieldDecoration.copyWith(
+              hintText: 'CEP',
+              hintStyle: AppStyles.formTextStyle,
+            ),
             validator: (value) {
               if (value == null || value.isEmpty) {
                 return 'Por favor, insira o CEP da empresa';
@@ -583,9 +629,13 @@ class _EditEmpresaFormState extends State<EditEmpresaForm> {
               return null;
             },
           ),
+          const SizedBox(height: 10),
           TextFormField(
             controller: _enderecoController,
-            decoration: const InputDecoration(labelText: 'Endereço'),
+            decoration: AppStyles.textFieldDecoration.copyWith(
+              hintText: 'Endereço',
+              hintStyle: AppStyles.formTextStyle,
+            ),
             validator: (value) {
               if (value == null || value.isEmpty) {
                 return 'Por favor, insira o endereço da empresa';
@@ -593,9 +643,13 @@ class _EditEmpresaFormState extends State<EditEmpresaForm> {
               return null;
             },
           ),
+          const SizedBox(height: 10),
           TextFormField(
             controller: _cidadeController,
-            decoration: const InputDecoration(labelText: 'Cidade'),
+            decoration: AppStyles.textFieldDecoration.copyWith(
+              hintText: 'Cidade',
+              hintStyle: AppStyles.formTextStyle,
+            ),
             validator: (value) {
               if (value == null || value.isEmpty) {
                 return 'Por favor, insira a cidade da empresa';
@@ -603,9 +657,13 @@ class _EditEmpresaFormState extends State<EditEmpresaForm> {
               return null;
             },
           ),
+          const SizedBox(height: 10),
           TextFormField(
             controller: _estadoController,
-            decoration: const InputDecoration(labelText: 'Estado'),
+            decoration: AppStyles.textFieldDecoration.copyWith(
+              hintText: 'Estado',
+              hintStyle: AppStyles.formTextStyle,
+            ),
             validator: (value) {
               if (value == null || value.isEmpty) {
                 return 'Por favor, insira o estado da empresa';
@@ -620,6 +678,7 @@ class _EditEmpresaFormState extends State<EditEmpresaForm> {
                 _submitForm();
               }
             },
+            style: AppStyles.elevatedButtonStyle,
             child: const Text('Editar Empresa'),
           ),
         ],

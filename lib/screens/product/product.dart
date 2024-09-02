@@ -1,6 +1,7 @@
 // ignore_for_file: library_private_types_in_public_api, use_build_context_synchronously
 
 import 'package:app_lojas/menu/menu.dart';
+import 'package:app_lojas/styles/styles_app.dart';
 import 'package:intl/intl.dart';
 import 'package:flutter/material.dart';
 import 'package:dio/dio.dart';
@@ -29,6 +30,7 @@ class _ProductScreenState extends State<ProductScreen> {
   void initState() {
     super.initState();
     _isMounted = true;
+    _productFuture = Future.value([]);
     _getStoredValues().then((_) {
       setState(() {
         _productFuture = _fetchProducts();
@@ -67,7 +69,8 @@ class _ProductScreenState extends State<ProductScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Produtos'),
+        title: Text('Produtos', style: AppStyles.largeTextStyle),
+        backgroundColor: AppStyles.primaryColor,
       ),
       drawer: const AppMenu(),
       body: Padding(
@@ -81,8 +84,9 @@ class _ProductScreenState extends State<ProductScreen> {
                   Expanded(
                     child: TextField(
                       controller: _searchController,
-                      decoration: const InputDecoration(
-                        labelText: 'Pesquisar por empresa',
+                      decoration: AppStyles.textFieldDecoration.copyWith(
+                        hintText: 'Pesquisar por código ou nome',
+                        hintStyle: AppStyles.formTextStyle,
                       ),
                     ),
                   ),
@@ -90,10 +94,11 @@ class _ProductScreenState extends State<ProductScreen> {
                   SizedBox(
                     width: 200,
                     child: ElevatedButton(
+                      style: AppStyles.elevatedButtonStyle,
                       onPressed: () {
                         _openCreateProductForm(context);
                       },
-                      child: const Text('Criar Produto', style: TextStyle(fontSize: 12)),
+                      child: Text('Criar Produto', style: AppStyles.smallTextStyle,),
                     ),
                   ),
                 ],
@@ -126,22 +131,25 @@ class _ProductScreenState extends State<ProductScreen> {
             itemBuilder: (context, index) {
               final product = products[index];
               return Card(
-                margin: const EdgeInsets.symmetric(vertical: 10),
+                shape: AppStyles.cardTheme.shape,
+                margin: AppStyles.cardTheme.margin,
+                elevation: AppStyles.cardTheme.elevation,
+                color: AppStyles.cardTheme.color,
                 child: Padding(
                   padding: const EdgeInsets.all(15.0),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text('Nome: ${product.nome}',
-                          style: Theme.of(context).textTheme.titleLarge),
-                      Text('Preco: ${product.preco}'),
-                      Text('Descrição: ${product.descricao}'),
-                      Text('Quantidade: ${product.quantidade}'),
+                          style: AppStyles.listItemTitleStyle),
+                      Text('Preco: ${product.preco}', style: AppStyles.listItemSubtitleStyle),
+                      Text('Descrição: ${product.descricao}', style: AppStyles.listItemSubtitleStyle),
+                      Text('Quantidade: ${product.quantidade}', style: AppStyles.listItemSubtitleStyle),
                       Text(
-                        'Data de fabricação: ${DateFormat('dd-MM-yyyy').format(product.dataDeFabricacao)}',
+                        'Data de fabricação: ${DateFormat('dd-MM-yyyy').format(product.dataDeFabricacao)}', style: AppStyles.listItemSubtitleStyle
                       ),
                       Text(
-                        'Data de validade: ${DateFormat('dd-MM-yyyy').format(product.dataDeValidade)}',
+                        'Data de validade: ${DateFormat('dd-MM-yyyy').format(product.dataDeValidade)}', style: AppStyles.listItemSubtitleStyle
                       ),
                       ButtonBar(
                         alignment: MainAxisAlignment.end,
@@ -149,7 +157,8 @@ class _ProductScreenState extends State<ProductScreen> {
                           IconButton(
                             icon: const Icon(Icons.edit),
                             onPressed: () =>
-                                _openEditProductForm(context, product),
+                              _openEditProductForm(context, product),
+                              color: AppStyles.primaryColor, 
                           ),
                           // IconButton(
                           //   icon: const Icon(Icons.delete),
@@ -198,7 +207,7 @@ class _ProductScreenState extends State<ProductScreen> {
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: const Text('Criar Produto'),
+          title: Text('Criar Produto', style: AppStyles.formTitleStyle),
           content: IntrinsicHeight(
             child: SingleChildScrollView(
               child: SizedBox(
@@ -224,7 +233,7 @@ class _ProductScreenState extends State<ProductScreen> {
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: const Text('Editar Produto'),
+          title: Text('Editar Produto', style: AppStyles.formTitleStyle),
           content: IntrinsicHeight(
             child: SingleChildScrollView(
               child: SizedBox(
@@ -305,7 +314,10 @@ class _ProductFormState extends State<ProductForm> {
         children: [
           TextFormField(
             controller: _nameController,
-            decoration: const InputDecoration(labelText: 'Nome'),
+            decoration: AppStyles.textFieldDecoration.copyWith(
+              hintText: 'Nome',
+              hintStyle: AppStyles.formTextStyle,
+            ),
             validator: (value) {
               if (value == null || value.isEmpty) {
                 return 'Por favor, insira o nome';
@@ -313,9 +325,13 @@ class _ProductFormState extends State<ProductForm> {
               return null;
             },
           ),
+          const SizedBox(height: 10),
           TextFormField(
             controller: _precoController,
-            decoration: const InputDecoration(labelText: 'Preço'),
+            decoration: AppStyles.textFieldDecoration.copyWith(
+              hintText: 'Preço',
+              hintStyle: AppStyles.formTextStyle,
+            ),
             validator: (value) {
               if (value == null || value.isEmpty) {
                 return 'Por favor, insira o preço';
@@ -323,9 +339,13 @@ class _ProductFormState extends State<ProductForm> {
               return null;
             },
           ),
+          const SizedBox(height: 10),
           TextFormField(
             controller: _descriptionController,
-            decoration: const InputDecoration(labelText: 'Descrição'),
+            decoration: AppStyles.textFieldDecoration.copyWith(
+              hintText: 'Descrição',
+              hintStyle: AppStyles.formTextStyle,
+            ),
             validator: (value) {
               if (value == null || value.isEmpty) {
                 return 'Por favor, insira a descrição';
@@ -333,9 +353,13 @@ class _ProductFormState extends State<ProductForm> {
               return null;
             },
           ),
+          const SizedBox(height: 10),
           TextFormField(
             controller: _amountController,
-            decoration: const InputDecoration(labelText: 'Quantidade'),
+            decoration: AppStyles.textFieldDecoration.copyWith(
+              hintText: 'Quantidade',
+              hintStyle: AppStyles.formTextStyle,
+            ),
             validator: (value) {
               if (value == null || value.isEmpty) {
                 return 'Por favor, insira o quantidade';
@@ -343,11 +367,13 @@ class _ProductFormState extends State<ProductForm> {
               return null;
             },
           ),
+          const SizedBox(height: 10),
           TextFormField(
             controller: _dataDeFabricacaoController,
-            decoration: const InputDecoration(
-              suffixIcon: Icon(Icons.calendar_today),
+            decoration: AppStyles.textFieldDecoration.copyWith(
+              suffixIcon: const Icon(Icons.calendar_today, color: AppStyles.primaryColor,),
               hintText: 'Data de fabricação',
+              hintStyle: AppStyles.formTextStyle,
             ),
             onTap: () async {
               DateTime? pickeddate = await showDatePicker(
@@ -369,11 +395,13 @@ class _ProductFormState extends State<ProductForm> {
               }
             },
           ),
+          const SizedBox(height: 10),
           TextFormField(
             controller: _dataDeValidadeController,
-            decoration: const InputDecoration(
-              suffixIcon: Icon(Icons.calendar_today),
+            decoration: AppStyles.textFieldDecoration.copyWith(
+              suffixIcon: const Icon(Icons.calendar_today, color: AppStyles.primaryColor,),
               hintText: 'Data de validade',
+              hintStyle: AppStyles.formTextStyle,
             ),
             onTap: () async {
               DateTime? pickeddate = await showDatePicker(
@@ -402,6 +430,7 @@ class _ProductFormState extends State<ProductForm> {
                 _submitForm();
               }
             },
+            style: AppStyles.elevatedButtonStyle,
             child: const Text('Criar Produto'),
           ),
         ],
@@ -591,7 +620,10 @@ class _EditProductFormState extends State<EditProductForm> {
         children: [
           TextFormField(
             controller: _nameController,
-            decoration: const InputDecoration(labelText: 'Nome'),
+            decoration: AppStyles.textFieldDecoration.copyWith(
+              hintText: 'Nome',
+              hintStyle: AppStyles.formTextStyle,
+            ),
             validator: (value) {
               if (value == null || value.isEmpty) {
                 return 'Por favor, insira o nome';
@@ -599,9 +631,13 @@ class _EditProductFormState extends State<EditProductForm> {
               return null;
             },
           ),
+          const SizedBox(height: 10),
           TextFormField(
             controller: _precoController,
-            decoration: const InputDecoration(labelText: 'Preço'),
+            decoration: AppStyles.textFieldDecoration.copyWith(
+              hintText: 'Preço',
+              hintStyle: AppStyles.formTextStyle,
+            ),
             validator: (value) {
               if (value == null || value.isEmpty) {
                 return 'Por favor, insira o preço';
@@ -609,9 +645,13 @@ class _EditProductFormState extends State<EditProductForm> {
               return null;
             },
           ),
+          const SizedBox(height: 10),
           TextFormField(
             controller: _descriptionController,
-            decoration: const InputDecoration(labelText: 'Descrição'),
+            decoration: AppStyles.textFieldDecoration.copyWith(
+              hintText: 'Descrição',
+              hintStyle: AppStyles.formTextStyle,
+            ),
             validator: (value) {
               if (value == null || value.isEmpty) {
                 return 'Por favor, insira a descrição';
@@ -619,9 +659,13 @@ class _EditProductFormState extends State<EditProductForm> {
               return null;
             },
           ),
+          const SizedBox(height: 10),
           TextFormField(
             controller: _amountController,
-            decoration: const InputDecoration(labelText: 'Quantidade'),
+            decoration: AppStyles.textFieldDecoration.copyWith(
+              hintText: 'Quantidade',
+              hintStyle: AppStyles.formTextStyle,
+            ),
             validator: (value) {
               if (value == null || value.isEmpty) {
                 return 'Por favor, insira a quantidade';
@@ -629,11 +673,13 @@ class _EditProductFormState extends State<EditProductForm> {
               return null;
             },
           ),
+          const SizedBox(height: 10),
           TextFormField(
             controller: _dataDeFabricacaoController,
-            decoration: const InputDecoration(
-              suffixIcon: Icon(Icons.calendar_today),
+            decoration: AppStyles.textFieldDecoration.copyWith(
+              suffixIcon: const Icon(Icons.calendar_today, color: AppStyles.primaryColor,),
               hintText: 'Data de fabricação',
+              hintStyle: AppStyles.formTextStyle,
             ),
             onTap: () async {
               DateTime? pickeddate = await showDatePicker(
@@ -655,11 +701,13 @@ class _EditProductFormState extends State<EditProductForm> {
               }
             },
           ),
+          const SizedBox(height: 10),
           TextFormField(
             controller: _dataDeValidadeController,
-            decoration: const InputDecoration(
-              suffixIcon: Icon(Icons.calendar_today),
+            decoration: AppStyles.textFieldDecoration.copyWith(
+              suffixIcon: const Icon(Icons.calendar_today, color: AppStyles.primaryColor,),
               hintText: 'Data de validade',
+              hintStyle: AppStyles.formTextStyle,
             ),
             onTap: () async {
               DateTime? pickeddate = await showDatePicker(
@@ -684,6 +732,7 @@ class _EditProductFormState extends State<EditProductForm> {
           const SizedBox(height: 20),
           ElevatedButton(
             onPressed: _submitUpdateForm,
+            style: AppStyles.elevatedButtonStyle,
             child: const Text('Atualizar Produto'),
           ),
         ],
