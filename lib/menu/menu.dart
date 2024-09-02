@@ -46,7 +46,8 @@ class AppMenu extends StatelessWidget {
             },
           ),
           ListTile(
-            leading: const Icon(Icons.shopping_cart, color: AppStyles.primaryColor),
+            leading:
+                const Icon(Icons.shopping_cart, color: AppStyles.primaryColor),
             title: const Text('Produtos'),
             onTap: () {
               Navigator.pushReplacementNamed(context, '/produtos');
@@ -59,9 +60,18 @@ class AppMenu extends StatelessWidget {
               Navigator.pushReplacementNamed(context, '/vendas');
             },
           ),
+          ListTile(
+            leading:
+                const Icon(Icons.assignment, color: AppStyles.primaryColor),
+            title: const Text('Relatório'),
+            onTap: () {
+              Navigator.pushReplacementNamed(context, '/relatorio');
+            },
+          ),
           const Spacer(),
           ListTile(
-            leading: const Icon(Icons.exit_to_app, color: AppStyles.primaryColor),
+            leading:
+                const Icon(Icons.exit_to_app, color: AppStyles.primaryColor),
             title: const Text('Sair'),
             onTap: () => _clearStoredValues(context),
           ),
