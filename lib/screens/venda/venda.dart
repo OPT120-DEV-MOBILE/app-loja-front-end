@@ -4,6 +4,7 @@ import 'package:app_lojas/menu/menu.dart';
 import 'package:app_lojas/styles/styles_app.dart';
 import 'package:flutter/material.dart';
 import 'package:dio/dio.dart';
+import 'package:fluttertoast/fluttertoast.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:async';
 
@@ -193,9 +194,30 @@ class _VendaScreenState extends State<VendaScreen> {
   }
 
   double aplicarDesconto(double precoTotal, String codigoDesconto) {
-  double desconto = 0.10;
-  return precoTotal * (1 - desconto);
+    double desconto = 0.0;
+    
+    if (codigoDesconto.startsWith('ganhe')) {
+      final porcentagem = double.tryParse(codigoDesconto.substring(5)) ?? 0;
+      
+      // Verifica se a porcentagem de desconto é válida
+      if (porcentagem > 0 && porcentagem <= 40) {
+        desconto = porcentagem / 100;
+      } else {
+        Fluttertoast.showToast(
+          msg: "O desconto não pode ser maior que 40%",
+          toastLength: Toast.LENGTH_SHORT,
+          gravity: ToastGravity.TOP,
+          backgroundColor: Colors.red,
+          textColor: Colors.white,
+          fontSize: 16.0,
+        );
+        return precoTotal;
+      }
+    }
+
+    return precoTotal * (1 - desconto);
   }
+
 
   Future<List<Venda>> _fetchVendas({String? query}) async {
     try {

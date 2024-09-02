@@ -227,9 +227,9 @@ class VendaEditarState extends State<VendaEditarScreen> {
   }
 
   double _calcularPrecoParcelado() {
-    final precoTotal = _calcularPrecoTotal();
+    final precoTotalComDesconto = _aplicarDesconto(_calcularPrecoTotal());
     final parcelas = int.tryParse(_parcelasController.text) ?? 1;
-    return parcelas > 0 ? precoTotal / parcelas : 0.0;
+    return parcelas > 0 ? precoTotalComDesconto / parcelas : 0.0;
   }
 
   double _aplicarDesconto(double precoTotal) {
