@@ -4,6 +4,7 @@ import 'package:app_lojas/screens/empresa/empresa.dart';
 import 'package:app_lojas/screens/home/home.dart';
 import 'package:app_lojas/screens/login/login.dart';
 import 'package:app_lojas/screens/product/product.dart';
+import 'package:app_lojas/screens/relatorio/relatorio.dart';
 import 'package:app_lojas/screens/user/user.dart';
 import 'package:app_lojas/screens/venda/venda.dart';
 import 'package:flutter/material.dart';
@@ -36,6 +37,7 @@ class MyApp extends StatelessWidget {
           final id = ModalRoute.of(context)!.settings.arguments as int;
           return VendaEditarScreen(id: id);
         },
+        '/relatorio': (context) => const RelatorioScreen(),
       },
     );
   }

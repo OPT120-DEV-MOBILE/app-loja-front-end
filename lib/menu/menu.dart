@@ -26,9 +26,16 @@ class AppMenu extends StatelessWidget {
           ),
           ListTile(
             leading: const Icon(Icons.home, color: AppStyles.primaryColor),
-            title: const Text('Dashboard'),
+            title: const Text('Home'),
             onTap: () {
               Navigator.pushReplacementNamed(context, '/');
+            },
+          ),
+          ListTile(
+            leading: const Icon(Icons.insert_chart, color: AppStyles.primaryColor),
+            title: const Text('Relatórios'),
+            onTap: () {
+              Navigator.pushReplacementNamed(context, '/relatorio');
             },
           ),
           ListTile(

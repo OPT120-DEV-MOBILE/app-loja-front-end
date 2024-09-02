@@ -89,8 +89,8 @@ class _VendaScreenState extends State<VendaScreen> {
                     child: TextField(
                       controller: _searchController,
                       decoration: AppStyles.textFieldDecoration.copyWith(
-                        hintText: 'Pesquisar por funcionário ou cliente',
-                        hintStyle: AppStyles.formTextStyle,
+                      hintText: 'Pesquisar por funcionário ou cliente',
+                      hintStyle: AppStyles.formTextStyle,
                       ),
                     ),
                   ),
