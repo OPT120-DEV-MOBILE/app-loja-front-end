@@ -1,10 +1,12 @@
 // ignore_for_file: library_private_types_in_public_api, use_build_context_synchronously
 
+import 'package:app_lojas/menu/menu.dart';
 import 'package:intl/intl.dart';
 import 'package:flutter/material.dart';
 import 'package:dio/dio.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:fluttertoast/fluttertoast.dart';
+import 'dart:async';
 
 class ProductScreen extends StatefulWidget {
   const ProductScreen({super.key});
@@ -20,6 +22,8 @@ class _ProductScreenState extends State<ProductScreen> {
   String? jwt;
   String? role;
   String? idUsuario;
+  final TextEditingController _searchController = TextEditingController(); // Controlador para o campo de pesquisa
+  Timer? _debounce;
 
   @override
   void initState() {
@@ -30,6 +34,7 @@ class _ProductScreenState extends State<ProductScreen> {
         _productFuture = _fetchProducts();
       });
     });
+    _searchController.addListener(_onSearchChanged);
   }
 
   Future<void> _getStoredValues() async {
@@ -44,7 +49,18 @@ class _ProductScreenState extends State<ProductScreen> {
   @override
   void dispose() {
     _isMounted = false;
+    _searchController.dispose();
+    _debounce?.cancel();
     super.dispose();
+  }
+
+  void _onSearchChanged() {
+    if (_debounce?.isActive ?? false) _debounce!.cancel();
+    _debounce = Timer(const Duration(milliseconds: 500), () {
+      setState(() {
+        _productFuture = _fetchProducts(query: _searchController.text);
+      });
+    });
   }
 
   @override
@@ -53,6 +69,7 @@ class _ProductScreenState extends State<ProductScreen> {
       appBar: AppBar(
         title: const Text('Produtos'),
       ),
+      drawer: const AppMenu(),
       body: Padding(
         padding: const EdgeInsets.all(20.0),
         child: SingleChildScrollView(
@@ -60,16 +77,23 @@ class _ProductScreenState extends State<ProductScreen> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Row(
-                mainAxisAlignment: MainAxisAlignment.end,
                 children: [
+                  Expanded(
+                    child: TextField(
+                      controller: _searchController,
+                      decoration: const InputDecoration(
+                        labelText: 'Pesquisar por empresa',
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
                   SizedBox(
-                    width: 120,
+                    width: 200,
                     child: ElevatedButton(
                       onPressed: () {
                         _openCreateProductForm(context);
                       },
-                      child: const Text('Criar Produto',
-                          style: TextStyle(fontSize: 10)),
+                      child: const Text('Criar Produto', style: TextStyle(fontSize: 12)),
                     ),
                   ),
                 ],
@@ -144,12 +168,13 @@ class _ProductScreenState extends State<ProductScreen> {
     );
   }
 
-  Future<List<Product>> _fetchProducts() async {
+  Future<List<Product>> _fetchProducts({String? query}) async {
     try {
       final dio = Dio();
       final options = Options(headers: {'JWT': jwt});
       final response = await dio.get(
         'http://localhost:3300/produtos/',
+        queryParameters: query != null && query.isNotEmpty ? {'produto': query} : null,
         options: options,
       );
       // print(response);
@@ -162,7 +187,6 @@ class _ProductScreenState extends State<ProductScreen> {
     } catch (error) {
       if (_isMounted) {
         setState(() {
-          // Handle the error state in the FutureBuilder
         });
       }
       throw Exception('Failed to load products: $error');

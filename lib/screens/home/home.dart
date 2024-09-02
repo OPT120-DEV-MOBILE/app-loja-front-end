@@ -1,3 +1,4 @@
+import 'package:app_lojas/menu/menu.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -27,76 +28,43 @@ class _HomeScreenState extends State<HomeScreen> {
       role = prefs.getString('role');
       idUsuario = prefs.getString('idUsuario');
     });
-  }
-
-  Future<void> _clearStoredValues() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.remove('token');
-    await prefs.remove('role');
-    await prefs.remove('idUsuario');
-    setState(() {
-      jwt = null;
-      role = null;
-      idUsuario = null;
-    });
+    if (jwt == null) {
+      // ignore: use_build_context_synchronously
+      Navigator.pushReplacementNamed(context, '/login');
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Home'),
+        title: const Text('Take Charge'),
       ),
+      drawer: const AppMenu(),
       body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            if (jwt == null)
-              ElevatedButton(
-                onPressed: () {
-                  Navigator.pushNamed(context, '/login');
-                },
-                child: const Text('Login'),
-              )
-            else if (jwt != null)
-              Column(
+        child: jwt == null
+            ? const CircularProgressIndicator()
+            : Column(
+                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  ElevatedButton(
-                    onPressed: () {
-                      Navigator.pushNamed(context, '/user');
-                    },
-                    child: const Text('Usuários'),
+                  Image.asset(
+                    'logo_2.png',
+                    width: 200,
+                    height: 150,
                   ),
-                  const SizedBox(height: 20),
-                  ElevatedButton(
-                    onPressed: () {
-                      Navigator.pushNamed(context, '/empresas');
-                    },
-                    child: const Text('Empresas'),
+                  const SizedBox(height: 10),
+                  Text(
+                    'Bem-vindo ao nosso aplicativo!',
+                    style: Theme.of(context).textTheme.headlineSmall,
                   ),
-                  const SizedBox(height: 20),
-                  ElevatedButton(
-                    onPressed: () {
-                      Navigator.pushNamed(context, '/produtos');
-                    },
-                    child: const Text('Produtos'),
-                  ),
-                  const SizedBox(height: 20),
-                  ElevatedButton(
-                    onPressed: () {
-                      Navigator.pushNamed(context, '/vendas');
-                    },
-                    child: const Text('Vendas'),
-                  ),
-                  const SizedBox(height: 20),
-                  ElevatedButton(
-                    onPressed: _clearStoredValues,
-                    child: const Text('Sair'),
+                  const SizedBox(height: 10),
+                  Text(
+                    'Utilize o menu lateral para navegar pelas diferentes seções do aplicativo.',
+                    textAlign: TextAlign.center,
+                    style: Theme.of(context).textTheme.bodyLarge,
                   ),
                 ],
               ),
-          ],
-        ),
       ),
     );
   }

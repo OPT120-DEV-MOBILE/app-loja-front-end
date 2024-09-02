@@ -1,8 +1,10 @@
 // ignore_for_file: library_private_types_in_public_api
 
+import 'package:app_lojas/menu/menu.dart';
 import 'package:flutter/material.dart';
 import 'package:dio/dio.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:async';
 
 class VendaScreen extends StatefulWidget {
   const VendaScreen({super.key});
@@ -18,6 +20,8 @@ class _VendaScreenState extends State<VendaScreen> {
   String? jwt;
   String? role;
   String? idUsuario;
+  final TextEditingController _searchController = TextEditingController();
+  Timer? _debounce;
 
   @override
   void initState() {
@@ -26,6 +30,7 @@ class _VendaScreenState extends State<VendaScreen> {
     _getStoredValues().then((_) {
       _refreshVendas();
     });
+    _searchController.addListener(_onSearchChanged);
   }
 
   Future<void> _getStoredValues() async {
@@ -40,6 +45,8 @@ class _VendaScreenState extends State<VendaScreen> {
   @override
   void dispose() {
     _isMounted = false;
+    _searchController.dispose();
+    _debounce?.cancel();
     super.dispose();
   }
 
@@ -51,12 +58,22 @@ class _VendaScreenState extends State<VendaScreen> {
     }
   }
 
+  void _onSearchChanged() {
+    if (_debounce?.isActive ?? false) _debounce!.cancel();
+    _debounce = Timer(const Duration(milliseconds: 500), () {
+      setState(() {
+        _vendaFuture = _fetchVendas(query: _searchController.text);
+      });
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Vendas'),
       ),
+      drawer: const AppMenu(),
       body: Padding(
         padding: const EdgeInsets.all(20.0),
         child: SingleChildScrollView(
@@ -66,6 +83,15 @@ class _VendaScreenState extends State<VendaScreen> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: [
+                  Expanded(
+                    child: TextField(
+                      controller: _searchController,
+                      decoration: const InputDecoration(
+                        labelText: 'Pesquisar por funcionário ou cliente',
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
                   SizedBox(
                     width: 200,
                     child: ElevatedButton(
@@ -153,17 +179,18 @@ class _VendaScreenState extends State<VendaScreen> {
     );
   }
 
-  Future<List<Venda>> _fetchVendas() async {
+  Future<List<Venda>> _fetchVendas({String? query}) async {
     try {
       final dio = Dio();
       final options = Options(headers: {'jwt-access': jwt});
       final response = await dio.get(
         'http://localhost:3300/vendas/',
+        queryParameters: query != null && query.isNotEmpty ? {'venda': query} : null,
         options: options,
       );
 
       if (response.statusCode == 201 && _isMounted) {
-        final List<dynamic> responseData = response.data;
+        final List<dynamic> responseData = response.data['vendas'];
         return responseData.map((json) => Venda.fromJson(json)).toList();
       } else {
         throw Exception('Failed to load vendas');
@@ -171,7 +198,6 @@ class _VendaScreenState extends State<VendaScreen> {
     } catch (error) {
       if (_isMounted) {
         setState(() {
-          // Handle the error state in the FutureBuilder
         });
       }
       throw Exception('Failed to load vendas: $error');

@@ -1,9 +1,11 @@
 // ignore_for_file: library_private_types_in_public_api
 
+import 'package:app_lojas/menu/menu.dart';
 import 'package:flutter/material.dart';
 import 'package:dio/dio.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_masked_text2/flutter_masked_text2.dart';
+import 'dart:async';  // Import necessário para o Timer
 
 class EmpresaScreen extends StatefulWidget {
   const EmpresaScreen({super.key});
@@ -19,7 +21,8 @@ class _EmpresaScreenState extends State<EmpresaScreen> {
   String? jwt;
   String? role;
   String? idUsuario;
-
+  final TextEditingController _searchController = TextEditingController(); // Controlador para o campo de pesquisa
+  Timer? _debounce;  // Timer para o debounce
 
   @override
   void initState() {
@@ -30,6 +33,17 @@ class _EmpresaScreenState extends State<EmpresaScreen> {
         _empresaFuture = _fetchEmpresas();
       });
     });
+
+    // Adicionando listener ao TextEditingController para o campo de pesquisa
+    _searchController.addListener(_onSearchChanged);
+  }
+
+  @override
+  void dispose() {
+    _isMounted = false;
+    _searchController.dispose();
+    _debounce?.cancel();  // Cancela o timer se a tela for desmontada
+    super.dispose();
   }
 
   Future<void> _getStoredValues() async {
@@ -41,10 +55,13 @@ class _EmpresaScreenState extends State<EmpresaScreen> {
     });
   }
 
-  @override
-  void dispose() {
-    _isMounted = false;
-    super.dispose();
+  void _onSearchChanged() {
+    if (_debounce?.isActive ?? false) _debounce!.cancel();
+    _debounce = Timer(const Duration(milliseconds: 500), () {
+      setState(() {
+        _empresaFuture = _fetchEmpresas(query: _searchController.text);
+      });
+    });
   }
 
   @override
@@ -53,6 +70,7 @@ class _EmpresaScreenState extends State<EmpresaScreen> {
       appBar: AppBar(
         title: const Text('Empresas'),
       ),
+      drawer: const AppMenu(),
       body: Padding(
         padding: const EdgeInsets.all(20.0),
         child: SingleChildScrollView(
@@ -60,16 +78,23 @@ class _EmpresaScreenState extends State<EmpresaScreen> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Row(
-                mainAxisAlignment: MainAxisAlignment.end,
                 children: [
+                  Expanded(
+                    child: TextField(
+                      controller: _searchController,  // Campo de pesquisa
+                      decoration: const InputDecoration(
+                        labelText: 'Pesquisar por empresa',
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
                   SizedBox(
                     width: 200,
                     child: ElevatedButton(
                       onPressed: () {
                         _openCreateEmpresaForm(context);
                       },
-                      child: const Text('Criar Empresa',
-                          style: TextStyle(fontSize: 12)),
+                      child: const Text('Criar Empresa', style: TextStyle(fontSize: 12)),
                     ),
                   ),
                 ],
@@ -108,8 +133,7 @@ class _EmpresaScreenState extends State<EmpresaScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('Nome: ${empresa.nome}',
-                          style: Theme.of(context).textTheme.titleLarge),
+                      Text('Nome: ${empresa.nome}', style: Theme.of(context).textTheme.titleLarge),
                       Text('Tipo do Documento: ${empresa.tipoDocumento}'),
                       Text('Nº Documento: ${empresa.numeroDocumento}'),
                       Text('CEP: ${empresa.cep}'),
@@ -121,9 +145,7 @@ class _EmpresaScreenState extends State<EmpresaScreen> {
                         children: [
                           IconButton(
                             icon: const Icon(Icons.edit),
-                            onPressed: () => {
-                              _openEditEmpresaForm(context, empresa),
-                            }
+                            onPressed: () => _openEditEmpresaForm(context, empresa),
                           ),
                           // IconButton(
                           //   icon: const Icon(Icons.delete),
@@ -142,12 +164,13 @@ class _EmpresaScreenState extends State<EmpresaScreen> {
     );
   }
 
-  Future<List<Empresa>> _fetchEmpresas() async {
+  Future<List<Empresa>> _fetchEmpresas({String? query}) async {
     try {
       final dio = Dio();
       final options = Options(headers: {'jwt-access': jwt});
       final response = await dio.get(
         'http://localhost:3300/empresas/',
+        queryParameters: query != null && query.isNotEmpty ? {'empresa': query} : null,
         options: options,
       );
 
@@ -184,7 +207,7 @@ class _EmpresaScreenState extends State<EmpresaScreen> {
                     });
                     Navigator.of(context).pop();
                   },
-                  jwt: jwt!
+                  jwt: jwt!,
                 ),
               ),
             ),

@@ -1,9 +1,13 @@
 // ignore_for_file: library_private_types_in_public_api
 
+import 'dart:async';
+
+import 'package:app_lojas/menu/menu.dart';
+import 'package:app_lojas/styles/styles_app.dart';
 import 'package:flutter/material.dart';
 import 'package:dio/dio.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_masked_text2/flutter_masked_text2.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class UserScreen extends StatefulWidget {
   const UserScreen({super.key});
@@ -15,11 +19,11 @@ class UserScreen extends StatefulWidget {
 class _UserScreenState extends State<UserScreen> {
   late bool _isMounted;
   late Future<List<User>> _userFuture;
-
   String? jwt;
   String? role;
   String? idUsuario;
-
+  final TextEditingController _searchController = TextEditingController();
+  Timer? _debounce;
 
   @override
   void initState() {
@@ -44,6 +48,8 @@ class _UserScreenState extends State<UserScreen> {
   @override
   void dispose() {
     _isMounted = false;
+    _debounce?.cancel();
+    _searchController.dispose();
     super.dispose();
   }
 
@@ -51,8 +57,10 @@ class _UserScreenState extends State<UserScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Usuário'),
+        title: Text('Usuário', style: AppStyles.largeTextStyle),
+        backgroundColor: AppStyles.primaryColor,
       ),
+      drawer: const AppMenu(),
       body: Padding(
         padding: const EdgeInsets.all(20.0),
         child: SingleChildScrollView(
@@ -60,16 +68,26 @@ class _UserScreenState extends State<UserScreen> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Row(
-                mainAxisAlignment: MainAxisAlignment.end,
                 children: [
+                  Expanded(
+                    child: TextField(
+                      controller: _searchController,
+                      decoration: AppStyles.textFieldDecoration.copyWith(
+                        hintText: 'Pesquisar por nome',
+                        hintStyle: AppStyles.formTextStyle,
+                      ),
+                      onChanged: _onSearchChanged,
+                    ),
+                  ),
+                  const SizedBox(width: 10),
                   SizedBox(
                     width: 120,
                     child: ElevatedButton(
+                      style: AppStyles.elevatedButtonStyle,
                       onPressed: () {
                         _openCreateUserForm(context);
                       },
-                      child: const Text('Criar Usuário',
-                          style: TextStyle(fontSize: 12)),
+                      child: Text('Criar Usuário', style: AppStyles.smallTextStyle,),
                     ),
                   ),
                 ],
@@ -83,69 +101,86 @@ class _UserScreenState extends State<UserScreen> {
     );
   }
 
-  Widget _buildList(BuildContext context) {
-    return FutureBuilder<List<User>>(
-      future: _userFuture,
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator());
-        } else if (snapshot.hasError) {
-          return Center(child: Text('Erro: ${snapshot.error}'));
-        } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
-          return const Center(child: Text('Nenhum usuário encontrado'));
-        } else {
-          final users = snapshot.data!;
-          return ListView.builder(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            itemCount: users.length,
-            itemBuilder: (context, index) {
-              final user = users[index];
-              return Card(
-                margin: const EdgeInsets.symmetric(vertical: 10),
-                child: Padding(
-                  padding: const EdgeInsets.all(15.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('Nome: ${user.nome}',
-                          style: Theme.of(context).textTheme.titleLarge),
-                      Text('Email: ${user.email}'),
-                      Text('CPF: ${user.cpf}'),
-                      Text('Role: ${user.role.nome}'),
-                      if (user.role.nome != 'ADMIN') ...[
-                        Text('Quantidade de Compras: ${user.quantidadeDeCompras}'),
-                      ],
-                      ButtonBar(
-                        alignment: MainAxisAlignment.end,
-                        children: [
-                          IconButton(
-                            icon: const Icon(Icons.edit),
-                            onPressed: () => _openEditUserForm(context, user),
-                          ),
-                          // IconButton(
-                          //   icon: const Icon(Icons.delete),
-                          //   onPressed: () => _deleteUser(user.id),
-                          // ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-              );
-            },
-          );
-        }
-      },
-    );
+  void _onSearchChanged(String query) {
+    if (_debounce?.isActive ?? false) _debounce?.cancel();
+    _debounce = Timer(const Duration(milliseconds: 500), () {
+      setState(() {
+        _userFuture = _fetchUsers(query: query);
+      });
+    });
   }
 
-  Future<List<User>> _fetchUsers() async {
+  Widget _buildList(BuildContext context) {
+  return FutureBuilder<List<User>>(
+    future: _userFuture,
+    builder: (context, snapshot) {
+      if (snapshot.connectionState == ConnectionState.waiting) {
+        return const Center(child: CircularProgressIndicator());
+      } else if (snapshot.hasError) {
+        return Center(child: Text('Erro: ${snapshot.error}'));
+      } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
+        return const Center(child: Text('Nenhum usuário encontrado'));
+      } else {
+        final users = snapshot.data!;
+        return ListView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          itemCount: users.length,
+          itemBuilder: (context, index) {
+            final user = users[index];
+            return Card(
+              shape: AppStyles.cardTheme.shape,
+              margin: AppStyles.cardTheme.margin,
+              elevation: AppStyles.cardTheme.elevation,
+              color: AppStyles.cardTheme.color,
+              child: Padding(
+                padding: const EdgeInsets.all(15.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Nome: ${user.nome}', style: AppStyles.listItemTitleStyle),
+                    Text('Email: ${user.email}', style: AppStyles.listItemSubtitleStyle),
+                    Text('CPF: ${user.cpf}', style: AppStyles.listItemSubtitleStyle),
+                    Text('Role: ${user.role.nome}', style: AppStyles.listItemSubtitleStyle),
+                    if (user.role.nome != 'ADMIN') ...[
+                      Text('Quantidade de Compras: ${user.quantidadeDeCompras}', style: AppStyles.listItemSubtitleStyle),
+                    ],
+                    ButtonBar(
+                      alignment: MainAxisAlignment.end,
+                      children: [
+                        IconButton(
+                          icon: const Icon(Icons.edit),
+                          onPressed: () => _openEditUserForm(context, user),
+                          color: AppStyles.primaryColor, 
+                        ),
+                        // IconButton(
+                        //   icon: const Icon(Icons.delete),
+                        //   onPressed: () => _deleteUser(user.id),
+                        //   style: AppStyles.iconButtonTheme.style,
+                        // ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      }
+    },
+  );
+}
+
+
+  Future<List<User>> _fetchUsers({String? query}) async {
     try {
       final dio = Dio();
       final options = Options(headers: {'jwt-access': jwt});
       final response = await dio.get(
         'http://localhost:3300/users/',
+        queryParameters: query != null && query.isNotEmpty
+            ? {'usuario': query}
+            : null,
         options: options,
       );
 
@@ -170,7 +205,7 @@ class _UserScreenState extends State<UserScreen> {
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: const Text('Criar Usuário'),
+          title: Text('Criar Usuário', style: AppStyles.formTitleStyle),
           content: IntrinsicHeight(
             child: SingleChildScrollView(
               child: SizedBox(
@@ -182,7 +217,7 @@ class _UserScreenState extends State<UserScreen> {
                     });
                     Navigator.of(context).pop();
                   },
-                  jwt: jwt!
+                  jwt: jwt!,
                 ),
               ),
             ),
@@ -197,7 +232,7 @@ class _UserScreenState extends State<UserScreen> {
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: const Text('Editar Usuário'),
+          title: Text('Editar Usuário', style: AppStyles.formTitleStyle),
           content: IntrinsicHeight(
             child: SingleChildScrollView(
               child: SizedBox(
@@ -310,11 +345,11 @@ class _UserFormState extends State<UserForm> {
         children: [
           DropdownButtonFormField<Role>(
             value: _selectedRole,
-            hint: const Text('Selecione o Cargo'),
+            hint: Text('Selecione o Cargo', style: AppStyles.dropdownStyle.hintStyle),
             items: _roles.map((role) {
               return DropdownMenuItem<Role>(
                 value: role,
-                child: Text(role.nome),
+                child: Text(role.nome, style: AppStyles.dropdownStyle.itemStyle),
               );
             }).toList(),
             onChanged: (value) {
@@ -329,14 +364,18 @@ class _UserFormState extends State<UserForm> {
               }
               return null;
             },
+            decoration: AppStyles.textFieldDecoration.copyWith(
+              hintText: 'Selecione o Cargo',
+            ),
           ),
+          const SizedBox(height: 10),
           DropdownButtonFormField<Empresa>(
             value: _selectedEmpresa,
-            hint: const Text('Selecione a Empresa (opcional)'),
+            hint: Text('Selecione a Empresa (opcional)', style: AppStyles.dropdownStyle.hintStyle),
             items: _empresas.map((empresa) {
               return DropdownMenuItem<Empresa>(
                 value: empresa,
-                child: Text(empresa.nome),
+                child: Text(empresa.nome, style: AppStyles.dropdownStyle.itemStyle),
               );
             }).toList(),
             onChanged: (value) {
@@ -344,10 +383,15 @@ class _UserFormState extends State<UserForm> {
                 _selectedEmpresa = value;
               });
             },
+            decoration: AppStyles.textFieldDecoration
           ),
+          const SizedBox(height: 10),
           TextFormField(
             controller: _nameController,
-            decoration: const InputDecoration(labelText: 'Nome'),
+            decoration: AppStyles.textFieldDecoration.copyWith(
+              hintText: 'Nome',
+              hintStyle: AppStyles.formTextStyle,
+            ),
             validator: (value) {
               if (value == null || value.isEmpty) {
                 return 'Por favor, insira o nome';
@@ -355,9 +399,13 @@ class _UserFormState extends State<UserForm> {
               return null;
             },
           ),
+          const SizedBox(height: 10),
           TextFormField(
             controller: _emailController,
-            decoration: const InputDecoration(labelText: 'Email'),
+            decoration: AppStyles.textFieldDecoration.copyWith(
+              hintText: 'Email',
+              hintStyle: AppStyles.formTextStyle,
+            ),
             validator: (value) {
               if (value == null || value.isEmpty) {
                 return 'Por favor, insira o email';
@@ -365,10 +413,14 @@ class _UserFormState extends State<UserForm> {
               return null;
             },
           ),
+          const SizedBox(height: 10),
           if (!_isCliente)
             TextFormField(
               controller: _passwordController,
-              decoration: const InputDecoration(labelText: 'Senha'),
+              decoration: AppStyles.textFieldDecoration.copyWith(
+              hintText: 'Senha',
+              hintStyle: AppStyles.formTextStyle,
+            ),
               obscureText: true,
               validator: (value) {
                 if (value == null || value.isEmpty) {
@@ -377,9 +429,13 @@ class _UserFormState extends State<UserForm> {
                 return null;
               },
             ),
+          const SizedBox(height: 10),
           TextFormField(
             controller: _cpfController,
-            decoration: const InputDecoration(labelText: 'CPF'),
+            decoration: AppStyles.textFieldDecoration.copyWith(
+              hintText: 'CPF',
+              hintStyle: AppStyles.formTextStyle,
+            ),
             validator: (value) {
               if (value == null || value.isEmpty) {
                 return 'Por favor, insira o CPF';
@@ -394,6 +450,7 @@ class _UserFormState extends State<UserForm> {
                 _submitForm();
               }
             },
+            style: AppStyles.elevatedButtonStyle,
             child: const Text('Criar Usuário'),
           ),
         ],
@@ -555,11 +612,11 @@ class _EditUserFormState extends State<EditUserForm> {
         children: [
           DropdownButtonFormField<Role>(
             value: _selectedRole,
-            hint: const Text('Selecione o Cargo'),
+            hint: Text('Selecione o Cargo', style: AppStyles.dropdownStyle.hintStyle),
             items: _roles.map((role) {
               return DropdownMenuItem<Role>(
                 value: role,
-                child: Text(role.nome),
+                child: Text(role.nome, style: AppStyles.dropdownStyle.itemStyle),
               );
             }).toList(),
             onChanged: (value) {
@@ -574,14 +631,18 @@ class _EditUserFormState extends State<EditUserForm> {
               }
               return null;
             },
+            decoration: AppStyles.textFieldDecoration.copyWith(
+              hintText: 'Selecione o Cargo',
+            ),
           ),
+          const SizedBox(height: 10),
           DropdownButtonFormField<Empresa>(
             value: _selectedEmpresa,
-            hint: const Text('Selecione a Empresa (opcional)'),
+            hint: Text('Selecione a Empresa (opcional)', style: AppStyles.dropdownStyle.hintStyle),
             items: _empresas.map((empresa) {
               return DropdownMenuItem<Empresa>(
                 value: empresa,
-                child: Text(empresa.nome),
+                child: Text(empresa.nome, style: AppStyles.dropdownStyle.itemStyle),
               );
             }).toList(),
             onChanged: (value) {
@@ -589,10 +650,15 @@ class _EditUserFormState extends State<EditUserForm> {
                 _selectedEmpresa = value;
               });
             },
+          decoration: AppStyles.textFieldDecoration
           ),
+          const SizedBox(height: 10),
           TextFormField(
             controller: _nameController,
-            decoration: const InputDecoration(labelText: 'Nome'),
+            decoration: AppStyles.textFieldDecoration.copyWith(
+              hintText: 'Nome',
+              hintStyle: AppStyles.formTextStyle,
+            ),
             validator: (value) {
               if (value == null || value.isEmpty) {
                 return 'Por favor, insira o nome';
@@ -600,9 +666,13 @@ class _EditUserFormState extends State<EditUserForm> {
               return null;
             },
           ),
+          const SizedBox(height: 10),
           TextFormField(
             controller: _emailController,
-            decoration: const InputDecoration(labelText: 'Email'),
+            decoration: AppStyles.textFieldDecoration.copyWith(
+              hintText: 'Email',
+              hintStyle: AppStyles.formTextStyle,
+            ),
             validator: (value) {
               if (value == null || value.isEmpty) {
                 return 'Por favor, insira o email';
@@ -610,6 +680,7 @@ class _EditUserFormState extends State<EditUserForm> {
               return null;
             },
           ),
+          const SizedBox(height: 10),
           if (!_isCliente)
             SwitchListTile(
               title: const Text('Quero alterar a senha'),
@@ -619,11 +690,17 @@ class _EditUserFormState extends State<EditUserForm> {
                   _alterarSenha = value;
                 });
               },
+              activeColor: AppStyles.primaryColor,
+              inactiveThumbColor: AppStyles.secondaryColor,
+              inactiveTrackColor: AppStyles.secondaryColor.withOpacity(0.3),
             ),
           if (!_isCliente && _alterarSenha)
             TextFormField(
               controller: _passwordController,
-              decoration: const InputDecoration(labelText: 'Alterar Senha'),
+              decoration: AppStyles.textFieldDecoration.copyWith(
+                hintText: 'Senha',
+                hintStyle: AppStyles.formTextStyle,
+              ),
               obscureText: true,
               validator: (value) {
                 if (_alterarSenha && (value == null || value.isEmpty)) {
@@ -635,6 +712,7 @@ class _EditUserFormState extends State<EditUserForm> {
           const SizedBox(height: 20),
           ElevatedButton(
             onPressed: _submitForm,
+            style: AppStyles.elevatedButtonStyle,
             child: const Text('Atualizar Usuário'),
           ),
         ],
