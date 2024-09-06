@@ -8,6 +8,7 @@ import 'package:flutter/material.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter_masked_text2/flutter_masked_text2.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:fluttertoast/fluttertoast.dart';
 
 class UserScreen extends StatefulWidget {
   const UserScreen({super.key});
@@ -517,7 +518,9 @@ class _EditUserFormState extends State<EditUserForm> {
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
   final _emailController = TextEditingController();
+  final _oldPasswordController = TextEditingController();
   final _passwordController = TextEditingController();
+  final _confirmPasswordController = TextEditingController();
   final _cpfController = MaskedTextController(mask: '000.000.000-00');
 
   final List<Empresa> _empresas = [];
@@ -585,7 +588,8 @@ class _EditUserFormState extends State<EditUserForm> {
             'id': widget.user.id,
             'nome': _nameController.text,
             'email': _emailController.text,
-            'senha': _passwordController.text,
+            'senhaNova': _passwordController.text,
+            'senhaAntiga': _alterarSenha ? _oldPasswordController.text : null,
             'cpf': _cpfController.text,
             'idEmpresa': _selectedEmpresa?.id,
             'roles': _selectedRole?.id,
@@ -594,12 +598,34 @@ class _EditUserFormState extends State<EditUserForm> {
         );
 
         if (response.statusCode == 201) {
+          Fluttertoast.showToast(
+            msg: "Usuário atualizado com sucesso!",
+            toastLength: Toast.LENGTH_SHORT,
+            gravity: ToastGravity.TOP,
+            backgroundColor: Colors.red,
+            textColor: Colors.white,
+            fontSize: 16.0,
+          );
           widget.onFormSubmitted();
         } else {
-          // Handle error
+          Fluttertoast.showToast(
+            msg: "Erro ao atualizar usuário, senha antiga incorreta!",
+            toastLength: Toast.LENGTH_SHORT,
+            gravity: ToastGravity.TOP,
+            backgroundColor: Colors.red,
+            textColor: Colors.white,
+            fontSize: 16.0,
+          );
         }
       } catch (error) {
-        // Handle error
+        Fluttertoast.showToast(
+          msg: "Erro ao atualizar usuário, senha antiga incorreta!",
+          toastLength: Toast.LENGTH_SHORT,
+          gravity: ToastGravity.TOP,
+          backgroundColor: Colors.red,
+          textColor: Colors.white,
+          fontSize: 16.0,
+        );
       }
     }
   }
@@ -695,21 +721,52 @@ class _EditUserFormState extends State<EditUserForm> {
               inactiveThumbColor: AppStyles.secondaryColor,
               inactiveTrackColor: AppStyles.secondaryColor.withOpacity(0.3),
             ),
-          if (!_isCliente && _alterarSenha)
+          if (!_isCliente && _alterarSenha) ...[
             TextFormField(
-              controller: _passwordController,
+              controller: _oldPasswordController, // Campo de senha antiga
               decoration: AppStyles.textFieldDecoration.copyWith(
-                hintText: 'Senha',
+                hintText: 'Senha Antiga',
                 hintStyle: AppStyles.formTextStyle,
               ),
               obscureText: true,
               validator: (value) {
                 if (_alterarSenha && (value == null || value.isEmpty)) {
-                  return 'Por favor, insira a senha';
+                  return 'Por favor, insira a senha antiga';
                 }
                 return null;
               },
             ),
+            const SizedBox(height: 10),
+            TextFormField(
+              controller: _passwordController,
+              decoration: AppStyles.textFieldDecoration.copyWith(
+                hintText: 'Nova Senha',
+                hintStyle: AppStyles.formTextStyle,
+              ),
+              obscureText: true,
+              validator: (value) {
+                if (_alterarSenha && (value == null || value.isEmpty)) {
+                  return 'Por favor, insira a nova senha';
+                }
+                return null;
+              },
+            ),
+            const SizedBox(height: 10),
+            TextFormField(
+              controller: _confirmPasswordController,
+              decoration: AppStyles.textFieldDecoration.copyWith(
+                hintText: 'Confirmar Nova Senha',
+                hintStyle: AppStyles.formTextStyle,
+              ),
+              obscureText: true,
+              validator: (value) {
+                if (_alterarSenha && (value != _passwordController.text)) {
+                  return 'As senhas não coincidem';
+                }
+                return null;
+              },
+            ),
+          ],
           const SizedBox(height: 20),
           ElevatedButton(
             onPressed: _submitForm,
