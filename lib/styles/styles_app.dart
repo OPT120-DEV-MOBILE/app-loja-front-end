@@ -108,10 +108,10 @@ class AppStyles {
     ),
   );
 
-  static final SwitchThemeData switchTheme = SwitchThemeData(
-    thumbColor: WidgetStateProperty.all(switchThumbColor),
-    trackColor: WidgetStateProperty.all(switchTrackColor),
-  );
+  // static final SwitchThemeData switchTheme = SwitchThemeData(
+  //   thumbColor: WidgetStateProperty.all(switchThumbColor),
+  //   trackColor: WidgetStateProperty.all(switchTrackColor),
+  // );
 }
 
 class DropdownButtonFormFieldStyle {

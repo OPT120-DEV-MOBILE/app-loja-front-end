@@ -199,7 +199,6 @@ class _VendaScreenState extends State<VendaScreen> {
     if (codigoDesconto.startsWith('ganhe')) {
       final porcentagem = double.tryParse(codigoDesconto.substring(5)) ?? 0;
       
-      // Verifica se a porcentagem de desconto é válida
       if (porcentagem > 0 && porcentagem <= 40) {
         desconto = porcentagem / 100;
       } else {
