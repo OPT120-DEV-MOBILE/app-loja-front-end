@@ -213,7 +213,7 @@ class _RelatorioScreenState extends State<RelatorioScreen> {
   }
 
   Future<Map<String, dynamic>> _fetchRelatorio(
-      {required String cpf, String? dataInicial, String? dataFinal}) async {
+    {required String cpf, String? dataInicial, String? dataFinal}) async {
     try {
       final dio = Dio();
       final options = Options(headers: {'jwt-access': jwt});
@@ -221,10 +221,25 @@ class _RelatorioScreenState extends State<RelatorioScreen> {
           ? 'http://localhost:3300/vendas/relatorio/cliente'
           : 'http://localhost:3300/vendas/relatorio/funcionario';
 
+      String? formattedDataInicio;
+      String? formattedDataFim;
+
+      if (dataInicial != null && dataInicial.isNotEmpty) {
+        formattedDataInicio = '${dataInicial}T00:00:00';
+      }
+
+      if (dataFinal != null && dataFinal.isNotEmpty) {
+        formattedDataFim = '${dataFinal}T23:59:59';
+      }
+
       final response = await dio.get(
         endpoint,
-        queryParameters: dataInicial != null && dataInicial.isNotEmpty
-            ? {'cpf': cpf, 'dataInicio': dataInicial, 'dataFim': dataFinal}
+        queryParameters: formattedDataInicio != null
+            ? {
+                'cpf': cpf,
+                'dataInicio': formattedDataInicio,
+                'dataFim': formattedDataFim,
+              }
             : {
                 'cpf': cpf,
               },
@@ -243,6 +258,7 @@ class _RelatorioScreenState extends State<RelatorioScreen> {
       throw Exception('Failed to load vendas: $error');
     }
   }
+
 
   Future<Map<String, String>> _fetchUserCpfs({String? query}) async {
     try {
@@ -287,6 +303,7 @@ class FilterForm extends StatefulWidget {
   const FilterForm({super.key, required this.onFormSubmitted});
 
   @override
+  // ignore: library_private_types_in_public_api
   _FilterFormState createState() => _FilterFormState();
 }
 

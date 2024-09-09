@@ -184,7 +184,7 @@ class _VendaScreenState extends State<VendaScreen> {
                           'Código de Desconto: ${venda.codigoDesconto ?? 'Não disponível'}',
                           style: AppStyles.listItemSubtitleStyle),
                       Text(
-                          'Data da Venda: ${DateFormat('dd-MM-yyyy').format(venda.dataVenda!) ?? 'Não disponível'}',
+                          'Data da Venda: ${DateFormat('dd-MM-yyyy').format(venda.dataVenda!)}',
                           style: AppStyles.listItemSubtitleStyle),
                       const SizedBox(height: 10),
                       ButtonBar(
@@ -252,7 +252,6 @@ class _VendaScreenState extends State<VendaScreen> {
             query != null && query.isNotEmpty ? {'venda': query} : null,
         options: options,
       );
-      print(response.data);
 
       if (response.statusCode == 201 && _isMounted) {
         final List<dynamic> responseData = response.data['vendas'];
