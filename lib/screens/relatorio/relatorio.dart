@@ -1,8 +1,10 @@
+import 'package:fluttertoast/fluttertoast.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:app_lojas/menu/menu.dart';
 import 'package:app_lojas/styles/styles_app.dart';
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:dio/dio.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:async';
 
 import '../user/user.dart';
@@ -51,15 +53,18 @@ class _RelatorioScreenState extends State<RelatorioScreen> {
     super.dispose();
   }
 
-  Future<void> _refreshVendas() async {
+  Future<void> _refreshVendas({String? dataInicial, String? dataFinal}) async {
     if (_isMounted) {
       try {
         final Map<String, String> cpfToNameMap = await _fetchUserCpfs();
         final Map<String, Map<String, dynamic>> vendasPorNome = {};
 
         for (String cpf in cpfToNameMap.keys) {
-          final Map<String, dynamic> relatorio =
-              await _fetchRelatorio(cpf: cpf);
+          final Map<String, dynamic> relatorio = await _fetchRelatorio(
+            cpf: cpf,
+            dataInicial: dataInicial,
+            dataFinal: dataFinal,
+          );
 
           vendasPorNome[cpfToNameMap[cpf] ?? 'Desconhecido'] = {
             'total': relatorio['valorTotalVendas'],
@@ -86,11 +91,22 @@ class _RelatorioScreenState extends State<RelatorioScreen> {
         title: Text('Relatórios', style: AppStyles.largeTextStyle),
         backgroundColor: AppStyles.primaryColor,
         actions: [
+          ElevatedButton(
+            style: AppStyles.elevatedButtonStyle,
+            onPressed: () {
+              _openSelectDates(context);
+            },
+            child: Text(
+              'Fitrar',
+              style: AppStyles.smallTextStyle,
+            ),
+          ),
           PopupMenuButton<String>(
+            tooltip: "Filtrar relatório",
             onSelected: (String value) {
               setState(() {
                 _selectedReportType = value;
-                _refreshVendas(); 
+                _refreshVendas();
               });
             },
             itemBuilder: (BuildContext context) {
@@ -151,14 +167,15 @@ class _RelatorioScreenState extends State<RelatorioScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('Nome: $nome',
-                          style: AppStyles.listItemTitleStyle),
+                      Text('Nome: $nome', style: AppStyles.listItemTitleStyle),
                       const SizedBox(height: 10),
                       Text(
-                          'Quantidade de ${_selectedReportType == 'Clientes' ? 'Compras' : 'Vendas'}: $quantidade', style: AppStyles.listItemSubtitleStyle),
+                          'Quantidade de ${_selectedReportType == 'Clientes' ? 'Compras' : 'Vendas'}: $quantidade',
+                          style: AppStyles.listItemSubtitleStyle),
                       const SizedBox(height: 10),
                       Text(
-                          'Total de ${_selectedReportType == 'Clientes' ? 'Compras' : 'Vendas'}: R\$ ${double.tryParse(totalVendas.toString())?.toStringAsFixed(2) ?? '0.00'}', style: AppStyles.listItemSubtitleStyle),
+                          'Total de ${_selectedReportType == 'Clientes' ? 'Compras' : 'Vendas'}: R\$ ${double.tryParse(totalVendas.toString())?.toStringAsFixed(2) ?? '0.00'}',
+                          style: AppStyles.listItemSubtitleStyle),
                     ],
                   ),
                 ),
@@ -170,7 +187,33 @@ class _RelatorioScreenState extends State<RelatorioScreen> {
     );
   }
 
-  Future<Map<String, dynamic>> _fetchRelatorio({required String cpf}) async {
+  void _openSelectDates(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text('Selecione datas', style: AppStyles.formTitleStyle),
+          content: IntrinsicHeight(
+            child: SingleChildScrollView(
+              child: SizedBox(
+                width: 600,
+                child: FilterForm(
+                  onFormSubmitted: (dataInicial, dataFinal) {
+                    _refreshVendas(
+                        dataInicial: dataInicial, dataFinal: dataFinal);
+                    Navigator.of(context).pop();
+                  },
+                ),
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Future<Map<String, dynamic>> _fetchRelatorio(
+    {required String cpf, String? dataInicial, String? dataFinal}) async {
     try {
       final dio = Dio();
       final options = Options(headers: {'jwt-access': jwt});
@@ -178,9 +221,28 @@ class _RelatorioScreenState extends State<RelatorioScreen> {
           ? 'http://localhost:3300/vendas/relatorio/cliente'
           : 'http://localhost:3300/vendas/relatorio/funcionario';
 
+      String? formattedDataInicio;
+      String? formattedDataFim;
+
+      if (dataInicial != null && dataInicial.isNotEmpty) {
+        formattedDataInicio = '${dataInicial}T00:00:00';
+      }
+
+      if (dataFinal != null && dataFinal.isNotEmpty) {
+        formattedDataFim = '${dataFinal}T23:59:59';
+      }
+
       final response = await dio.get(
         endpoint,
-        queryParameters: {'cpf': cpf},
+        queryParameters: formattedDataInicio != null
+            ? {
+                'cpf': cpf,
+                'dataInicio': formattedDataInicio,
+                'dataFim': formattedDataFim,
+              }
+            : {
+                'cpf': cpf,
+              },
         options: options,
       );
 
@@ -196,6 +258,7 @@ class _RelatorioScreenState extends State<RelatorioScreen> {
       throw Exception('Failed to load vendas: $error');
     }
   }
+
 
   Future<Map<String, String>> _fetchUserCpfs({String? query}) async {
     try {
@@ -227,10 +290,178 @@ class _RelatorioScreenState extends State<RelatorioScreen> {
     } catch (error) {
       if (_isMounted) {
         setState(() {
-          // Handle the error state in the FutureBuilder
         });
       }
       throw Exception('Failed to load users: $error');
     }
+  }
+}
+
+class FilterForm extends StatefulWidget {
+  final Function onFormSubmitted;
+
+  const FilterForm({super.key, required this.onFormSubmitted});
+
+  @override
+  // ignore: library_private_types_in_public_api
+  _FilterFormState createState() => _FilterFormState();
+}
+
+class _FilterFormState extends State<FilterForm> {
+  final _formKey = GlobalKey<FormState>();
+  final _nameController = TextEditingController();
+  final _dataInicioController = TextEditingController();
+  final _dataFinalController = TextEditingController();
+
+  DateTime? _dateInicial;
+  DateTime? _dateFinal;
+
+  @override
+  void initState() {
+    super.initState();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Form(
+      key: _formKey,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          const Text("de"),
+          const SizedBox(height: 5),
+          TextFormField(
+            controller: _dataInicioController,
+            decoration: AppStyles.textFieldDecoration.copyWith(
+              suffixIcon: const Icon(
+                Icons.calendar_today,
+                color: AppStyles.primaryColor,
+              ),
+              hintStyle: AppStyles.formTextStyle,
+            ),
+            onTap: () async {
+              DateTime? pickeddate = await showDatePicker(
+                context: context,
+                initialDate: DateTime.now(),
+                firstDate: DateTime(2000),
+                lastDate: DateTime(2101),
+                initialDatePickerMode: DatePickerMode.year,
+              );
+
+              if (pickeddate != null) {
+                setState(
+                  () {
+                    _dateInicial = pickeddate;
+                    _dataInicioController.text =
+                        DateFormat('dd-MM-yyyy').format(pickeddate);
+                  },
+                );
+              }
+            },
+          ),
+          const SizedBox(height: 10),
+          const Text("para"),
+          const SizedBox(height: 5),
+          TextFormField(
+            controller: _dataFinalController,
+            decoration: AppStyles.textFieldDecoration.copyWith(
+              suffixIcon: const Icon(
+                Icons.calendar_today,
+                color: AppStyles.primaryColor,
+              ),
+              hintStyle: AppStyles.formTextStyle,
+            ),
+            onTap: () async {
+              DateTime? pickeddate = await showDatePicker(
+                context: context,
+                initialDate: DateTime.now(),
+                firstDate: DateTime(2000),
+                lastDate: DateTime(2101),
+                initialDatePickerMode: DatePickerMode.year,
+              );
+
+              if (pickeddate != null) {
+                setState(
+                  () {
+                    _dateFinal = pickeddate;
+                    _dataFinalController.text =
+                        DateFormat('dd-MM-yyyy').format(pickeddate);
+                  },
+                );
+              }
+            },
+          ),
+          const SizedBox(height: 20),
+          ElevatedButton(
+            onPressed: () {
+              if (_formKey.currentState!.validate()) {
+                _submitForm();
+              }
+            },
+            style: AppStyles.elevatedButtonStyle,
+            child: const Text('Mostrar'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _submitForm() async {
+    if (_formKey.currentState!.validate()) {
+      if (_dateInicial == null || _dateFinal == null) {
+        Fluttertoast.showToast(
+          msg: 'Por favor, selecione ambas as datas.',
+          toastLength: Toast.LENGTH_SHORT,
+          gravity: ToastGravity.CENTER,
+        );
+        return;
+      }
+
+      if (_dateInicial!.isAfter(_dateFinal!)) {
+        Fluttertoast.showToast(
+          msg: 'A data inicial não pode ser posterior à data final.',
+          toastLength: Toast.LENGTH_SHORT,
+          gravity: ToastGravity.CENTER,
+        );
+        return;
+      }
+
+      if (_dateInicial!.isAfter(DateTime.now()) ||
+          _dateFinal!.isAfter(DateTime.now())) {
+        Fluttertoast.showToast(
+          msg: 'A data inicial e final não pode ser posterior à data de hoje.',
+          toastLength: Toast.LENGTH_SHORT,
+          gravity: ToastGravity.CENTER,
+        );
+        return;
+      }
+
+      try {
+        final dataInicial = DateFormat('yyyy-MM-dd').format(_dateInicial!);
+        final dataFinal = DateFormat('yyyy-MM-dd').format(_dateFinal!);
+
+        widget.onFormSubmitted(dataInicial, dataFinal);
+
+        Fluttertoast.showToast(
+          msg: 'Formulário enviado com sucesso!',
+          toastLength: Toast.LENGTH_SHORT,
+          gravity: ToastGravity.BOTTOM,
+        );
+      } catch (e) {
+        Fluttertoast.showToast(
+          msg: 'Erro ao enviar formulário: $e',
+          toastLength: Toast.LENGTH_SHORT,
+          gravity: ToastGravity.BOTTOM,
+        );
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _dataInicioController.dispose();
+    _dataFinalController.dispose();
+    super.dispose();
   }
 }
